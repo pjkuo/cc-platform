@@ -440,6 +440,41 @@
   .hint-btn{flex:none}
   .hintbox{font-size:13px;color:var(--warn);line-height:1.6}
   .opt.elim{opacity:.4;text-decoration:line-through;pointer-events:none}
+  /* ===== classroom techniques: peer-instruction / worked-example / practice ===== */
+  .qz-round{font:700 12px var(--mono);color:var(--gold);margin:2px 0 8px}
+  .qz-opt.sel{background:rgba(255,210,80,.18);border-color:var(--gold);color:#fff}
+  .qz-ctrl{margin-top:10px}
+  .qz-again{font:600 13px var(--sans);background:var(--gold);border:1px solid var(--gold);color:#0c2620;border-radius:9px;padding:8px 14px;cursor:pointer}
+  .worked{background:#fff;border:1px solid var(--line);border-left:4px solid var(--hw);border-radius:12px;padding:16px 18px}
+  .worked.sw{border-left-color:var(--sw)} .worked.nw{border-left-color:var(--nw)}
+  .worked .wk-prob{font-size:14px;color:var(--ink);background:#f1f5fa;border-radius:8px;padding:10px 12px;margin-bottom:12px;line-height:1.6}
+  .wk-stage{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+  .wk-pos{color:var(--muted)}
+  .worked ol.wk-steps{margin:0 0 6px;padding-left:20px;font-size:14px;color:var(--ink);line-height:1.7}
+  .worked ol.wk-steps li{margin-bottom:4px}
+  .worked ol.wk-steps li.hidden{display:none}
+  .wk-q{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px}
+  .wk-q .wq-stem{font-size:14px;font-weight:700;margin-bottom:8px}
+  .wk-opts{display:flex;flex-direction:column;gap:6px}
+  .wk-opt{text-align:left;font:inherit;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+  .wk-opt:hover{border-color:var(--hw)}
+  .wk-opt:disabled{cursor:default}
+  .wk-opt.ok{background:#e7f6ee;border-color:var(--ok);color:#15533a}
+  .wk-opt.bad{background:#fdeceb;border-color:#d9534f}
+  .wk-opt.dim{opacity:.5}
+  .wk-fb{font-size:13px;margin-top:8px;color:var(--muted);line-height:1.6} .wk-fb b{color:var(--ink)}
+  .practice{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:18px}
+  .pr-q{margin-top:12px;border-top:1px solid var(--line);padding-top:12px;display:none}
+  .pr-meta{font:700 12px var(--mono);color:var(--muted);margin-bottom:6px}
+  .pr-stem{font-size:15px;font-weight:700;margin-bottom:10px}
+  .pr-opts{display:flex;flex-direction:column;gap:8px}
+  .pr-opt{text-align:left;font:inherit;font-size:14px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 13px;cursor:pointer}
+  .pr-opt:hover{border-color:var(--hw)}
+  .pr-opt:disabled{cursor:default}
+  .pr-opt.ok{background:#e7f6ee;border-color:var(--ok);color:#15533a}
+  .pr-opt.bad{background:#fdeceb;border-color:#d9534f}
+  .pr-opt.dim{opacity:.5}
+  .pr-fb{font-size:13.5px;margin-top:10px;color:var(--muted);line-height:1.6} .pr-fb b{color:var(--ink)}
   @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -461,6 +496,21 @@
   <div class="resume" id="ovResume">
     <div class="r-txt"><b id="ovResumeTitle">繼續學習</b><span id="ovResumeSub">載入進度中…</span></div>
     <button class="btn bex" id="ovResumeBtn">開始 →</button>
+  </div>
+  <div class="practice" id="prBox">
+    <h2 style="color:var(--ink);margin:0 0 4px">課堂暖身・提取與交錯練習（不計分）</h2>
+    <p class="lead" style="margin:0 0 10px">每節開頭做提取練習喚起記憶，或複習時做交錯練習提升遷移；即時回饋、不計入成績。</p>
+    <div class="arow">
+      <button class="btn primary" id="prRetrieval">🔁 隨機提取 3 題</button>
+      <button class="btn" id="prInterleave">🔀 交錯混合 6 題（三主軸）</button>
+    </div>
+    <div class="pr-q" id="prQ">
+      <div class="pr-meta" id="prMeta"></div>
+      <div class="pr-stem" id="prStem"></div>
+      <div class="pr-opts" id="prOpts"></div>
+      <div class="pr-fb" id="prFb"></div>
+      <div class="arow" style="margin-top:10px"><button class="btn" id="prNext" style="display:none">下一題 →</button></div>
+    </div>
   </div>
   <div class="panel" style="margin-bottom:18px">
     <h2 style="color:var(--ink)">課程架構與導覽</h2>
@@ -767,6 +817,20 @@
       </div>
     </div>
   </section>
+  <section class="block" id="worked-hw">
+    <h2 class="h2b">解題示範（放聲思考 → 半完成 → 獨立）</h2>
+    <div class="worked hw" data-worked="hw">
+      <div class="wk-prob"><b>題目：</b>按下電源後主機風扇有轉、燈也亮，但螢幕一直顯示「無訊號」。請判斷最可能的原因。</div>
+      <div class="wk-stage"><span class="bsel wk-pos">放聲思考 0 / 4</span><button class="btn primary wk-next">▶ 下一步思考</button></div>
+      <ol class="wk-steps"><li class="hidden">先看徵狀：風扇轉、燈亮 → 代表「有供電、主機大致能開」。</li><li class="hidden">縮小範圍：問題出在「畫面有沒有出來」這一段，與顯示輸出有關。</li><li class="hidden">提出假設：最可能是顯示卡沒插好，或螢幕訊號線沒接好。</li><li class="hidden">驗證：重插顯示卡、換一條螢幕線測試；若仍無訊號再往記憶體／主機板查。</li></ol>
+      <div class="wk-q" style="display:none">
+        <div class="wq-stem">半完成題：第 ③ 步「提出假設」，最合理的是？</div>
+        <div class="wk-opts"><button class="wk-opt" data-i="0">作業系統毀損</button><button class="wk-opt" data-i="1">顯示卡未插好或螢幕線沒接</button><button class="wk-opt" data-i="2">網路沒設定好</button><button class="wk-opt" data-i="3">硬碟沒有資料</button></div>
+        <div class="wk-fb"></div>
+        <div style="margin-top:10px"><button class="btn bex wk-indep" data-exam="hw">獨立練習：開始課後評量 →</button></div>
+      </div>
+    </div>
+  </section>
   <section class="block" id="quiz-hw">
     <h2 class="h2b">單元課後評量</h2>
     <div class="panel exam-cta hw">
@@ -897,6 +961,20 @@
         </div>
         <div class="sl-viewer"><div class="sl-empty">尚未載入外部講義。</div></div>
         <div class="sl-msg warnmsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="worked-sw">
+    <h2 class="h2b sw">解題示範（放聲思考 → 半完成 → 獨立）</h2>
+    <div class="worked sw" data-worked="sw">
+      <div class="wk-prob"><b>題目：</b>新接上一台印表機，驅動程式還沒安裝，按下「列印」卻完全沒反應。請判斷最可能的原因。</div>
+      <div class="wk-stage"><span class="bsel wk-pos">放聲思考 0 / 4</span><button class="btn primary wk-next">▶ 下一步思考</button></div>
+      <ol class="wk-steps"><li class="hidden">先看徵狀：應用程式按了列印，卻沒有任何動作。</li><li class="hidden">分層思考：應用程式 → 作業系統 → 驅動程式 → 硬體，找出哪一層斷掉。</li><li class="hidden">提出假設：作業系統「不認得」這台印表機，最可能是缺少驅動程式。</li><li class="hidden">驗證：安裝對應的印表機驅動後再列印一次。</li></ol>
+      <div class="wk-q" style="display:none">
+        <div class="wq-stem">半完成題：第 ③ 步「提出假設」，最合理的是？</div>
+        <div class="wk-opts"><button class="wk-opt" data-i="0">作業系統需要重灌</button><button class="wk-opt" data-i="1">缺少印表機的驅動程式</button><button class="wk-opt" data-i="2">IP 位址設錯</button><button class="wk-opt" data-i="3">螢幕線沒接</button></div>
+        <div class="wk-fb"></div>
+        <div style="margin-top:10px"><button class="btn bex wk-indep" data-exam="sw">獨立練習：開始課後評量 →</button></div>
       </div>
     </div>
   </section>
@@ -1037,6 +1115,20 @@
         </div>
         <div class="sl-viewer"><div class="sl-empty">尚未載入外部講義。</div></div>
         <div class="sl-msg warnmsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="worked-nw">
+    <h2 class="h2b nw">解題示範（放聲思考 → 半完成 → 獨立）</h2>
+    <div class="worked nw" data-worked="nw">
+      <div class="wk-prob"><b>題目：</b>可以連到區域網路、開內部網頁，但所有外部網站都打不開。請判斷最可能的原因。</div>
+      <div class="wk-stage"><span class="bsel wk-pos">放聲思考 0 / 4</span><button class="btn primary wk-next">▶ 下一步思考</button></div>
+      <ol class="wk-steps"><li class="hidden">先看徵狀：區網通、外網全部不通。</li><li class="hidden">分段思考：本機 → 預設閘道 → 對外線路 → DNS，逐段檢查。</li><li class="hidden">提出假設：對外的「出口」有問題——預設閘道或對外線路（若 IP 能 ping 通、只是網址打不開，才改懷疑 DNS）。</li><li class="hidden">驗證：檢查預設閘道設定、試 ping 一個外部 IP。</li></ol>
+      <div class="wk-q" style="display:none">
+        <div class="wq-stem">半完成題：第 ③ 步「提出假設」，最合理的是？</div>
+        <div class="wk-opts"><button class="wk-opt" data-i="0">顯示卡故障</button><button class="wk-opt" data-i="1">預設閘道或對外線路問題</button><button class="wk-opt" data-i="2">鍵盤沒接好</button><button class="wk-opt" data-i="3">記憶體不足</button></div>
+        <div class="wk-fb"></div>
+        <div style="margin-top:10px"><button class="btn bex wk-indep" data-exam="nw">獨立練習：開始課後評量 →</button></div>
       </div>
     </div>
   </section>
@@ -2347,7 +2439,7 @@ function makeTrouble(mountId, bank){
 })();
 
 /* ============================================================
-   10) 內建教學講義（由單元內容生成．約 20 張．含隨堂小測．與課後評量高度對應）
+   10) 內建教學講義（約 20 張．隨堂小測採同儕教學兩輪投票．與課後評量高度對應）
 ============================================================ */
 (function decks(){
   var REF={
@@ -2427,28 +2519,43 @@ function makeTrouble(mountId, bank){
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
   function escAttr(s){ return esc(s).replace(/"/g,"&quot;"); }
   function fmt(t){ return esc(t).replace(/\*([^*]+)\*/g,'<span class="hl">$1</span>'); }
-  function refHTML(r){ if(!r||!r.length) return ""; return '<div class="ds-ref"><b>\U0001F4DA 參考：</b>'+r.map(function(x){ return x.url? '<a href="'+escAttr(x.url)+'" target="_blank" rel="noopener">'+esc(x.label)+'</a>' : esc(x.label); }).join("\u3000\u00B7\u3000")+'</div>'; }
+  function refHTML(r){ if(!r||!r.length) return ""; return '<div class="ds-ref"><b>📚 參考：</b>'+r.map(function(x){ return x.url? '<a href="'+escAttr(x.url)+'" target="_blank" rel="noopener">'+esc(x.label)+'</a>' : esc(x.label); }).join("　·　")+'</div>'; }
   function slideHTML(s){
     var head='<div class="ds-kicker">'+esc(s.k||"")+'</div><h3 class="ds-title">'+fmt(s.t)+'</h3>';
     if(s.check){
       var btns=s.opts.map(function(o,idx){ return '<button class="qz-opt" data-i="'+idx+'">'+esc(o)+'</button>'; }).join("");
-      return head+'<div class="qz-opts">'+btns+'</div><div class="qz-fb">先思考再作答，點選看看。</div>';
+      return head+'<div class="qz-round">① 先各自作答</div><div class="qz-opts">'+btns+'</div><div class="qz-ctrl"><button class="qz-again" style="display:none">與同學討論後，再作答 →</button></div><div class="qz-fb">先思考、按下你的答案；之後與同學討論，再作答一次。</div>';
     }
     var lis=(s.pts||[]).map(function(p){ return "<li>"+fmt(p)+"</li>"; }).join("");
     return head+'<ul class="ds-pts">'+lis+'</ul>'+refHTML(s.ref);
   }
   function wireCheck(container,s){
     if(!s.check) return;
-    var opts=[].slice.call(container.querySelectorAll(".qz-opt")), fb=container.querySelector(".qz-fb");
-    opts.forEach(function(b){ b.addEventListener("click", function(){
-      if(b.disabled) return;
-      var pick=parseInt(b.getAttribute("data-i"),10), right=(pick===s.ans);
-      opts.forEach(function(o,i){ o.disabled=true; if(i===s.ans)o.classList.add("ok"); else if(i===pick)o.classList.add("bad"); else o.classList.add("dim"); });
-      fb.innerHTML=(right?'<b>\u2714 \u7b54\u5c0d\uff01</b> ':'<b>\u2718 \u518d\u60f3\u60f3\u3002</b> \u6b63\u89e3\uff1a'+esc(s.opts[s.ans])+'\u3002 ')+esc(s.exp||"");
-    }); });
+    var opts=[].slice.call(container.querySelectorAll(".qz-opt")), fb=container.querySelector(".qz-fb"),
+        again=container.querySelector(".qz-again"), roundLab=container.querySelector(".qz-round");
+    var round=1, pick1=null;
+    function choose(idx){
+      if(round===1){
+        pick1=idx;
+        opts.forEach(function(o,i){ o.disabled=true; o.classList.remove("dim","sel"); if(i===idx)o.classList.add("sel"); else o.classList.add("dim"); });
+        if(again) again.style.display="";
+        fb.textContent="已記住你的第一次作答；和同學討論後，再作答一次。";
+      } else {
+        var right=(idx===s.ans);
+        opts.forEach(function(o,i){ o.disabled=true; o.classList.remove("dim","sel"); if(i===s.ans)o.classList.add("ok"); else if(i===idx)o.classList.add("bad"); else o.classList.add("dim"); });
+        var chg=(pick1===null)?"":(pick1!==idx?"（你從「"+s.opts[pick1]+"」改成「"+s.opts[idx]+"」）":"（你維持原本的答案）");
+        fb.innerHTML=(right?"<b>✔ 答對！</b> ":"<b>✘ 再想想。</b> 正解："+esc(s.opts[s.ans])+"。 ")+esc(s.exp||"")+" "+chg;
+      }
+    }
+    opts.forEach(function(b){ b.addEventListener("click", function(){ if(b.disabled) return; choose(parseInt(b.getAttribute("data-i"),10)); }); });
+    if(again) again.addEventListener("click", function(){
+      round=2; if(roundLab) roundLab.textContent="② 討論後再作答（最終答案）";
+      opts.forEach(function(o){ o.disabled=false; o.classList.remove("dim","sel","ok","bad"); });
+      again.style.display="none"; fb.textContent="和同學討論後，選出最終答案。";
+    });
   }
   var ov=document.createElement("div"); ov.className="deck-ov";
-  ov.innerHTML='<div class="dov-stage" id="dovStage"></div><div class="dov-bar"><button class="btn" id="dovPrev">\u25C0 \u4e0a\u4e00\u5f35</button><span class="dov-pos" id="dovPos"></span><button class="btn" id="dovNext">\u4e0b\u4e00\u5f35 \u25B6</button><span class="spacer"></span><button class="btn" id="dovClose">\u2715 \u7d50\u675f\u7c21\u5831\uff08Esc\uff09</button></div>';
+  ov.innerHTML='<div class="dov-stage" id="dovStage"></div><div class="dov-bar"><button class="btn" id="dovPrev">◀ 上一張</button><span class="dov-pos" id="dovPos"></span><button class="btn" id="dovNext">下一張 ▶</button><span class="spacer"></span><button class="btn" id="dovClose">✕ 結束簡報（Esc）</button></div>';
   document.body.appendChild(ov);
   var dovStage=ov.querySelector("#dovStage"), dovPos=ov.querySelector("#dovPos"), ovUnit=null, ovIdx=0;
   function renderOv(){ var d=DATA[ovUnit]; dovStage.innerHTML=slideHTML(d[ovIdx]); wireCheck(dovStage,d[ovIdx]); dovPos.textContent=(ovIdx+1)+" / "+d.length; }
@@ -2470,7 +2577,7 @@ function makeTrouble(mountId, bank){
     if(prev) prev.addEventListener("click",function(){ go(-1); });
     if(next) next.addEventListener("click",function(){ go(1); });
     if(full) full.addEventListener("click",function(){ openOv(unit,i); });
-    if(ext) ext.addEventListener("click",function(){ var e=$("ext-"+unit); if(!e) return; var showIt=(e.style.display==="none"); e.style.display=showIt?"":"none"; ext.textContent=showIt?"\uFF0D \u6536\u5408\u5916\u90E8\u8B1B\u7FA9":"\uFF0B \u5916\u90E8\u8B1B\u7FA9"; });
+    if(ext) ext.addEventListener("click",function(){ var e=$("ext-"+unit); if(!e) return; var showIt=(e.style.display==="none"); e.style.display=showIt?"":"none"; ext.textContent=showIt?"－ 收合外部講義":"＋ 外部講義"; });
     render();
   });
 })();
@@ -2495,6 +2602,75 @@ function makeTrouble(mountId, bank){
   window.ccResume={render:render};
   render();
 })();
+
+/* ============================================================
+   12) 解題示範（放聲思考 → 半完成 → 獨立）
+============================================================ */
+(function worked(){
+  var ANS={
+    hw:{ans:1,exp:"風扇有轉代表有供電，問題出在畫面輸出，最可能是顯示卡或螢幕線。"},
+    sw:{ans:1,exp:"作業系統要靠驅動程式才認得硬體，沒裝驅動最可能。"},
+    nw:{ans:1,exp:"能連區網卻不能上網，先查對外的出口——預設閘道或對外線路。"}
+  };
+  [].slice.call(document.querySelectorAll(".worked")).forEach(function(box){
+    var unit=box.getAttribute("data-worked");
+    var steps=[].slice.call(box.querySelectorAll(".wk-steps li")), total=steps.length;
+    var nextBtn=box.querySelector(".wk-next"), pos=box.querySelector(".wk-pos"), q=box.querySelector(".wk-q");
+    var shown=0;
+    function upd(){ if(pos) pos.textContent="放聲思考 "+shown+" / "+total; }
+    upd();
+    if(nextBtn) nextBtn.addEventListener("click", function(){
+      if(shown<total){ steps[shown].classList.remove("hidden"); shown++; upd(); }
+      if(shown>=total){ nextBtn.style.display="none"; if(q) q.style.display=""; }
+    });
+    if(q){
+      var opts=[].slice.call(q.querySelectorAll(".wk-opt")), fb=q.querySelector(".wk-fb"), a=ANS[unit]||{ans:0,exp:""};
+      opts.forEach(function(b){ b.addEventListener("click", function(){
+        if(b.disabled) return;
+        var pick=parseInt(b.getAttribute("data-i"),10), right=(pick===a.ans);
+        opts.forEach(function(o,i){ o.disabled=true; if(i===a.ans)o.classList.add("ok"); else if(i===pick)o.classList.add("bad"); else o.classList.add("dim"); });
+        fb.innerHTML=(right?"<b>✔ 答對！</b> ":"<b>✘ 正解已標示。</b> ")+a.exp+" 接著做獨立練習，把同樣的思路用到新題目上。";
+      }); });
+    }
+  });
+})();
+
+/* ============================================================
+   13) 課堂暖身：提取練習 + 交錯練習（不計分，取自題庫）
+============================================================ */
+(function practice(){
+  var box=$("prBox"); if(!box) return;
+  var quiz=[], idx=0, locked=false;
+  var CAT={hw:"硬體",sw:"軟體",nw:"網路"};
+  function bank(){ return window.CC_BANK||[]; }
+  function shuffle(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t; } return a; }
+  function retrieval(n){ return shuffle(bank()).slice(0,n); }
+  function interleave(per){
+    var by={hw:[],sw:[],nw:[]}; bank().forEach(function(q){ if(by[q.cat]) by[q.cat].push(q); });
+    Object.keys(by).forEach(function(k){ by[k]=shuffle(by[k]).slice(0,per); });
+    var out=[]; for(var i=0;i<per;i++){ ["hw","sw","nw"].forEach(function(k){ if(by[k][i]) out.push(by[k][i]); }); } return out;
+  }
+  function render(){
+    locked=false; var q=quiz[idx]; if(!q) return;
+    $("prMeta").textContent="第 "+(idx+1)+" / "+quiz.length+" 題　·　"+(CAT[q.cat]||"");
+    $("prStem").textContent=q.stem;
+    $("prOpts").innerHTML=q.opts.map(function(o,i){ return '<button class="pr-opt" data-i="'+i+'">'+o+'</button>'; }).join("");
+    $("prFb").innerHTML=""; $("prNext").style.display="none";
+    [].slice.call($("prOpts").querySelectorAll(".pr-opt")).forEach(function(b){ b.addEventListener("click", function(){
+      if(locked) return; locked=true;
+      var pick=parseInt(b.getAttribute("data-i"),10), right=(pick===q.ans);
+      [].slice.call($("prOpts").querySelectorAll(".pr-opt")).forEach(function(o,i){ o.disabled=true; if(i===q.ans)o.classList.add("ok"); else if(i===pick)o.classList.add("bad"); else o.classList.add("dim"); });
+      $("prFb").innerHTML=(right?"<b>✔ 答對！</b> ":"<b>✘ 正解已標示。</b> ")+(q.exp||"")+(q.hint?'<div style="margin-top:4px;color:var(--muted)">💡 '+q.hint+'</div>':'');
+      $("prNext").style.display=(idx<quiz.length-1)?"":"none";
+      if(idx>=quiz.length-1) $("prFb").innerHTML+='<div style="margin-top:6px;color:var(--ok)"><b>✔ 本輪練習完成！</b></div>';
+    }); });
+  }
+  function start(list){ quiz=list; idx=0; if(!quiz.length) return; $("prQ").style.display="block"; render(); }
+  $("prRetrieval").addEventListener("click", function(){ start(retrieval(3)); });
+  $("prInterleave").addEventListener("click", function(){ start(interleave(2)); });
+  $("prNext").addEventListener("click", function(){ if(idx<quiz.length-1){ idx++; render(); } });
+})();
+
 </script>
 </body>
 </html>
