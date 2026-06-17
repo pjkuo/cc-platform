@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>計算機概論模擬平台｜硬體・軟體・網路</title>
+<style>
+  :root{
+    --board:#10312a; --board2:#0c2620; --gold:#e0b44a;
+    --ok:#34a36b; --fail:#e2574c; --warn:#d9912f;
+    --ink:#1b2733; --muted:#5b6b7a; --line:#dfe5ec; --bg:#eef1f5;
+    --hw:#2e5496; --hwd:#21407a;      /* 硬體 藍 */
+    --sw:#6b4d9e; --swd:#503a78;      /* 軟體 紫 */
+    --nw:#138a8a; --nwd:#0e6868;      /* 網路 青 */
+    --mono:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 18px 64px}
+
+  /* ===== header ===== */
+  header{background:linear-gradient(135deg,var(--board),var(--board2));color:#fff;padding:22px 0 18px;border-bottom:4px solid var(--gold)}
+  header .wrap{padding-bottom:0}
+  h1{margin:0 0 4px;font-size:25px;letter-spacing:.5px}
+  .sub{opacity:.9;font-size:14px}
+  .tag{display:inline-block;margin-top:9px;font:600 12px/1 var(--mono);background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);padding:6px 10px;border-radius:999px}
+
+  /* ===== tab nav ===== */
+  .nav{position:sticky;top:0;z-index:30;background:rgba(238,241,245,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin-bottom:22px}
+  .nav .wrap{display:flex;gap:4px;padding-top:0;padding-bottom:0;overflow-x:auto;flex-wrap:wrap}
+  .tab{flex:none;font:600 14px var(--sans);border:none;background:none;color:var(--muted);padding:14px 16px 11px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap;transition:.15s}
+  .tab .ico{font-family:var(--mono);font-size:12px;opacity:.7;margin-right:5px}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink);border-bottom-color:var(--gold)}
+  .tab[data-pillar="hw"].active{border-bottom-color:var(--hw)}
+  .tab[data-pillar="sw"].active{border-bottom-color:var(--sw)}
+  .tab[data-pillar="nw"].active{border-bottom-color:var(--nw)}
+
+  .view{display:none} .view.active{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  /* ===== generic panel / buttons ===== */
+  .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 2px 10px rgba(20,40,70,.04)}
+  .panel h2{margin:0 0 4px;font-size:16px;color:var(--hw)}
+  .panel.sw h2{color:var(--sw)} .panel.nw h2{color:var(--nw)}
+  .panel .lead{margin:0 0 12px;font-size:13px;color:var(--muted)}
+  .btn{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 14px;border-radius:10px;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:var(--hw);color:var(--hw)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--hw);color:#fff;border-color:var(--hw)}
+  .btn.primary:hover{background:var(--hwd);color:#fff}
+  .btn.sw{background:var(--sw);color:#fff;border-color:var(--sw)} .btn.sw:hover{background:var(--swd);color:#fff}
+  .btn.nw{background:var(--nw);color:#fff;border-color:var(--nw)} .btn.nw:hover{background:var(--nwd);color:#fff}
+  .btn.power{background:var(--ok);color:#fff;border-color:var(--ok)} .btn.power.on{background:var(--fail);border-color:var(--fail)}
+  .spacer{flex:1}
+  .arow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .status{font:700 13px/1 var(--mono);padding:7px 12px;border-radius:999px;border:1px solid var(--line)}
+  .status.off{color:var(--muted)} .status.booting,.status.shutting{color:var(--warn);border-color:var(--warn)}
+  .status.on{color:var(--ok);border-color:var(--ok)} .status.halted{color:var(--fail);border-color:var(--fail)}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;user-select:none}
+  .chk input{width:17px;height:17px;accent-color:var(--gold)}
+
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:1fr 1fr}
+  .gscene{grid-template-columns:1.4fr 1fr}
+  @media(max-width:880px){.g2,.gscene{grid-template-columns:1fr}}
+  section.block{margin-top:20px}
+  .h2b{font-size:17px;color:var(--hw);margin:0 0 12px;padding-left:12px;border-left:4px solid var(--gold)}
+  .h2b.sw{color:var(--sw)} .h2b.nw{color:var(--nw)}
+
+  /* ===== overview ===== */
+  .arch{display:grid;grid-template-columns:1fr;gap:14px}
+  .pillarrow{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:760px){.pillarrow{grid-template-columns:1fr}}
+  .pillar{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;cursor:pointer;transition:.18s;box-shadow:0 2px 10px rgba(20,40,70,.04)}
+  .pillar:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(20,40,70,.1)}
+  .pillar .top{padding:14px 16px;color:#fff}
+  .pillar.hw .top{background:linear-gradient(135deg,var(--hw),var(--hwd))}
+  .pillar.sw .top{background:linear-gradient(135deg,var(--sw),var(--swd))}
+  .pillar.nw .top{background:linear-gradient(135deg,var(--nw),var(--nwd))}
+  .pillar .top b{display:block;font-size:17px}
+  .pillar .top span{font:600 11px var(--mono);opacity:.85}
+  .pillar .items{padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font:600 12px var(--mono);background:#f1f5fa;border:1px solid var(--line);color:var(--ink);padding:5px 9px;border-radius:8px}
+  .pillar.hw .chip{background:#eef3fb;border-color:#d6e2f4}
+  .pillar.sw .chip{background:#f2eefa;border-color:#e0d6f1}
+  .pillar.nw .chip{background:#e6f5f5;border-color:#cce8e8}
+  .pillar .go{padding:0 16px 14px;font:600 12px var(--mono);color:var(--muted)}
+
+  /* vertical stack diagram */
+  .vstack{margin-top:4px}
+  .layer{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-bottom:8px;background:#fff;transition:.18s}
+  .layer .lv{font:700 11px var(--mono);color:#fff;width:64px;flex:none;text-align:center;padding:5px 0;border-radius:7px}
+  .layer.l-app .lv{background:var(--sw)} .layer.l-os .lv{background:var(--swd)}
+  .layer.l-drv .lv{background:#7e62ad} .layer.l-hw .lv{background:var(--hw)} .layer.l-net .lv{background:var(--nw)}
+  .layer .lt b{font-size:14px} .layer .lt span{display:block;font-size:12px;color:var(--muted)}
+  .layer.lit{box-shadow:0 0 0 3px var(--gold) inset;transform:translateX(6px)}
+  .flowarrow{text-align:center;color:var(--muted);font-size:18px;line-height:1;margin:-2px 0 6px}
+
+  /* ===== device cards ===== */
+  .devcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:520px){.devcards{grid-template-columns:1fr}}
+  .dc{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  .dc .ic{width:30px;height:30px;flex:none;border-radius:7px;display:grid;place-items:center;font:700 12px var(--mono);color:#fff}
+  .dc .ic.in{background:#3a6ea5} .dc .ic.out{background:#5a8f5a} .dc .ic.core{background:var(--hw)}
+  .dc .meta{flex:1;min-width:0} .dc .meta b{font-size:14px} .dc .meta span{display:block;font-size:11.5px;color:var(--muted)}
+  .dc .tg{font:700 13px var(--mono);border:none;background:none;cursor:pointer;padding:6px 8px;border-radius:8px}
+  .dc.on .tg{color:var(--fail)} .dc.off .tg{color:var(--ok)}
+  .dc.off{background:#fafbfc} .dc.off .meta b{color:var(--muted)}
+
+  /* ===== scene / svg ===== */
+  .scene{padding:10px}
+  svg.desk{width:100%;height:auto;display:block;background:linear-gradient(#f7f9fc,#eaeef4);border-radius:12px}
+  .dev{cursor:pointer} .dev .hit{fill:transparent}
+  .dev.unplugged .body{opacity:.22;filter:grayscale(1)}
+  .dev .untag{opacity:0;font:700 11px var(--mono);fill:var(--fail)} .dev.unplugged .untag{opacity:1}
+  .led{transition:fill .3s} .cable{fill:none;stroke:#9aa6b2;stroke-width:3;stroke-linecap:round;opacity:.55}
+  .flowdot{filter:drop-shadow(0 0 3px rgba(46,84,150,.6))}
+  @keyframes blink{50%{opacity:.25}} .booting .led-pwr{animation:blink .6s infinite}
+  .core-slot{cursor:pointer} .core-slot:focus-visible{outline:3px solid var(--gold)}
+  .core-slot .emptybox{fill:rgba(255,255,255,.03);stroke:#6b8e80;stroke-width:2;stroke-dasharray:5 4;opacity:0}
+  .core-slot .coretag{opacity:0;font:700 10px var(--mono);fill:#9fc2b4}
+  .core-slot.removed .fillrect,.core-slot.removed .corelabel{opacity:0}
+  .core-slot.removed .emptybox,.core-slot.removed .coretag{opacity:1}
+  .desk.processing #slot-cpu rect{stroke:var(--gold);stroke-width:3}
+  @keyframes cpuglow{50%{filter:drop-shadow(0 0 6px rgba(224,180,74,.8))}}
+  .desk.processing #slot-cpu{animation:cpuglow .8s infinite}
+
+  /* ===== console ===== */
+  .post{background:#07140f;border:1px solid #173127;border-radius:12px;padding:12px;font-family:var(--mono);color:#bfe6cf;min-height:200px}
+  .post .ttl{color:var(--gold);font-size:12px;letter-spacing:2px;border-bottom:1px dashed #1f4234;padding-bottom:6px;margin-bottom:8px}
+  .logline{font-size:12.5px;padding:2px 0;white-space:pre-wrap}
+  .logline.ok{color:#7fe6a6} .logline.fail{color:#ff8d83} .logline.warn{color:#f2c673} .logline.run{color:#bfe6cf}
+  .cyc{display:none;margin-top:10px;border-top:1px dashed #1f4234;padding-top:10px} .cyc.show{display:block}
+  .cyc-row{display:flex;gap:6px}
+  .stage{flex:1;text-align:center;font-family:var(--mono);font-size:11px;color:#7fae93;background:rgba(255,255,255,.03);border:1px solid #1f4234;border-radius:7px;padding:8px 4px;transition:.2s}
+  .stage b{display:block;color:#cfe9da;font-size:12px}
+  .stage.active{background:var(--gold);color:#0c2620;border-color:var(--gold)} .stage.active b{color:#0c2620}
+
+  /* config capability list */
+  .cap{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .cap:last-child{border-bottom:none}
+  .cap .st{flex:none;font-weight:700;width:30px;font-family:var(--mono)}
+  .cap .st.ok{color:var(--ok)} .cap .st.no{color:var(--fail)}
+  .cap .nm{flex:none;width:104px} .cap .rs{color:var(--muted);font-size:12px} .cap .rs.bad{color:var(--fail)}
+
+  /* ===== tables ===== */
+  table.map{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+  table.map th,table.map td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
+  table.map th{background:#eef3fb;color:var(--hw);font-size:13px}
+  table.map.sw th{background:#f2eefa;color:var(--sw)} table.map.nw th{background:#e6f5f5;color:var(--nw)}
+  table.map tr:last-child td{border-bottom:none} table.map .c{color:var(--muted);font-size:12.5px}
+  .io-in{color:#3a6ea5;font-weight:700} .io-out{color:#5a8f5a;font-weight:700}
+
+  /* ===== slot build (hw & sw install) ===== */
+  .buildsvg{width:100%;height:auto;display:block;background:linear-gradient(#f7f9fc,#eef2f7);border-radius:12px;border:1px solid var(--line)}
+  .bsel{font:600 13px var(--mono);color:var(--hw)}
+  .runout{font-size:13.5px;padding:10px 12px;border-radius:10px;background:#f4f6f8;border:1px solid var(--line)}
+  .runout.ok{background:#eaf6ef;border-color:#bfe3cd;color:#1c6b43} .runout.no{background:#fdeceb;border-color:#f3c5c0;color:#a23128}
+
+  /* ===== assembly steps & score ===== */
+  .asm-steps{display:flex;flex-wrap:wrap;gap:6px 14px;margin:10px 0}
+  .asm-step{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted)}
+  .asm-step .b{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;font:700 11px var(--mono)}
+  .asm-step.done{color:var(--ink)} .asm-step.done .b{background:var(--ok);border-color:var(--ok);color:#fff}
+  .asm-banner{display:none;background:#fff7e6;border:1px solid #f0d9a8;border-radius:10px;padding:8px 12px;font-size:13px;color:#8a5b14;margin-bottom:10px} .asm-banner.show{display:block}
+  .score-wrap{display:none;margin-top:14px;border-top:1px dashed var(--line);padding-top:12px} .score-wrap.show{display:block}
+  .score-big{font:800 42px/1 var(--mono);color:var(--hw)}
+  .score-bar{height:10px;border-radius:6px;background:#e6ebf2;overflow:hidden;margin:8px 0}
+  .score-bar i{display:block;height:100%;background:linear-gradient(90deg,#5a8f5a,#34a36b);transition:width .5s}
+  .score-list{font-size:13px;margin:8px 0 0;padding:0;list-style:none}
+  .score-list li{padding:3px 0;display:flex;gap:8px;border-bottom:1px solid var(--line)} .score-list li:last-child{border-bottom:none}
+  .score-list li .m{font-family:var(--mono);color:var(--muted);flex:none;width:50px}
+  .sug{background:#eef3fb;border-left:3px solid var(--hw);padding:9px 11px;border-radius:0 8px 8px 0;font-size:13px;margin-top:10px}
+  .diag-live{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+  .diag-live .dic{width:32px;height:32px;flex:none;border-radius:8px;display:grid;place-items:center;font:700 16px var(--mono);color:#fff}
+  .diag-live.ok .dic{background:var(--ok)} .diag-live.bad .dic{background:var(--fail)}
+  .diag-live .d b{font-size:14px;display:block} .diag-live .d span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+
+  /* ===== install queue (software) ===== */
+  .swstack{display:flex;flex-direction:column-reverse;gap:8px}
+  .swlayer{display:flex;align-items:center;gap:12px;border:2px dashed var(--line);border-radius:12px;padding:12px 14px;background:#fafbfc;transition:.2s}
+  .swlayer.done{border-style:solid;background:#fff}
+  .swlayer .si{width:40px;height:40px;flex:none;border-radius:9px;display:grid;place-items:center;font:700 13px var(--mono);color:#fff;background:#c2cad3}
+  .swlayer.done .si{background:var(--sw)}
+  .swlayer .sm{flex:1} .swlayer .sm b{font-size:14px} .swlayer .sm span{display:block;font-size:12px;color:var(--muted)}
+  .swlayer .stt{font:700 12px var(--mono);color:var(--muted)} .swlayer.done .stt{color:var(--ok)}
+  .swlayer.lit{box-shadow:0 0 0 3px var(--gold) inset}
+
+  /* ===== network form ===== */
+  .netform{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.netform{grid-template-columns:1fr}}
+  .nf{display:flex;flex-direction:column;gap:4px}
+  .nf label{font:600 12px var(--mono);color:var(--nw)}
+  .nf select{font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+  .nf select.bad{border-color:var(--fail);background:#fdeceb}
+  .netscene{width:100%;height:auto;display:block;background:linear-gradient(#f7f9fc,#eef2f7);border:1px solid var(--line);border-radius:12px}
+  .pingout{font-family:var(--mono);font-size:12.5px;background:#07140f;color:#bfe6cf;border-radius:10px;padding:12px;min-height:120px;white-space:pre-wrap}
+
+  /* ===== quiz cards ===== */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+  .card .q{font-weight:700;margin:0 0 8px;font-size:14px}
+  .card .num{font:700 12px var(--mono);color:var(--gold);background:#10312a;padding:4px 8px;border-radius:6px;margin-right:6px}
+  .card .ans{display:none;margin-top:10px;font-size:13px;background:#f1f6f2;border-left:3px solid var(--ok);padding:8px 10px;border-radius:0 8px 8px 0} .card .ans.show{display:block}
+
+  /* assessment engine */
+  .qbox{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:#fff}
+  .qmeta{display:flex;align-items:center;gap:10px;font:700 12px var(--mono);color:var(--muted);margin-bottom:8px}
+  .qcat{padding:3px 9px;border-radius:999px;color:#fff;font-size:11px}
+  .qcat.hw{background:var(--hw)} .qcat.sw{background:var(--sw)} .qcat.nw{background:var(--nw)}
+  .qstem{font-size:15px;font-weight:700;margin:0 0 12px;line-height:1.5}
+  .opts{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .opt{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:14px;transition:.12s}
+  .opt:hover{border-color:var(--hw)}
+  .opt input{width:17px;height:17px;accent-color:var(--hw)}
+  .opt.correct{border-color:var(--ok);background:#eaf6ef} .opt.wrong{border-color:var(--fail);background:#fdeceb}
+  .opt.disabled{pointer-events:none}
+  .explain{display:none;font-size:13.5px;background:#eef3fb;border-left:3px solid var(--hw);padding:10px 12px;border-radius:0 8px 8px 0;margin-bottom:12px} .explain.show{display:block}
+  .qprog{height:8px;border-radius:5px;background:#e6ebf2;overflow:hidden;margin-bottom:14px}
+  .qprog i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),#f0c873);transition:width .3s}
+  .catbars{margin-top:10px}
+  .catbar{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px}
+  .catbar .cl{width:62px;flex:none;font:700 12px var(--mono)}
+  .catbar .ct{flex:1;height:14px;border-radius:7px;background:#e6ebf2;overflow:hidden}
+  .catbar .ct i{display:block;height:100%}
+  .catbar.hw .ct i{background:var(--hw)} .catbar.sw .ct i{background:var(--sw)} .catbar.nw .ct i{background:var(--nw)}
+  .catbar .cn{font:700 12px var(--mono);color:var(--muted);width:46px;text-align:right;flex:none}
+
+  .note{margin-top:20px;background:#eef3fb;border:1px solid #d6e2f4;border-radius:14px;padding:15px 18px;font-size:14px}
+  .note b{color:var(--hw)}
+  footer{margin-top:28px;text-align:center;font-size:12px;color:var(--muted)}
+
+  /* predict modal */
+  .ov{position:fixed;inset:0;background:rgba(12,28,22,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:60}
+  .ov.show{display:flex}
+  .modal{background:#fff;border-radius:16px;max-width:460px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal h3{margin:0 0 4px;color:var(--hw);font-size:17px}
+  .modal p.m{margin:0 0 12px;font-size:13px;color:var(--muted)}
+  .modal .mopts{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+  .modal .mopt{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;font-size:14px}
+  .modal .mopt input{width:17px;height:17px;accent-color:var(--hw)}
+  .modal .mopt:has(input:checked){border-color:var(--hw);background:#eef3fb}
+  .modal .acts{display:flex;gap:10px;justify-content:flex-end}
+  .verdict{font-size:14px;margin:0 0 14px;padding:10px 12px;border-radius:10px;display:none}
+  .verdict.show{display:block}.verdict.good{background:#eaf6ef;color:#1c6b43}.verdict.part{background:#fdf3e3;color:#8a5b14}
+  .vline{font-size:13px;margin:3px 0}.vline .g{color:var(--ok);font-weight:700}.vline .b{color:var(--fail);font-weight:700}
+
+  /* ===== home entry buttons (子頁面導覽) ===== */
+  .home-entry{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:6px 0 4px}
+  @media(max-width:760px){.home-entry{grid-template-columns:repeat(2,1fr)}}
+  .entry-btn{display:flex;flex-direction:column;align-items:flex-start;gap:3px;border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff;cursor:pointer;text-align:left;font:inherit;transition:.16s;box-shadow:0 2px 10px rgba(20,40,70,.04);border-top:4px solid var(--muted)}
+  .entry-btn:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(20,40,70,.1)}
+  .entry-btn .ei{font:700 16px var(--mono)}
+  .entry-btn b{font-size:16px}
+  .entry-btn .es{font:600 12px var(--mono);color:var(--muted)}
+  .entry-btn.hw{border-top-color:var(--hw)} .entry-btn.hw .ei,.entry-btn.hw b{color:var(--hw)}
+  .entry-btn.sw{border-top-color:var(--sw)} .entry-btn.sw .ei,.entry-btn.sw b{color:var(--sw)}
+  .entry-btn.nw{border-top-color:var(--nw)} .entry-btn.nw .ei,.entry-btn.nw b{color:var(--nw)}
+  .entry-btn.as{border-top-color:var(--gold)} .entry-btn.as .ei,.entry-btn.as b{color:var(--warn)}
+
+  /* ===== subpage back bar ===== */
+  .subbar{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .btn.back{border-color:var(--line)} .btn.back:hover{border-color:var(--ink);color:var(--ink)}
+  .subbar .crumb{font:700 15px var(--sans);color:var(--ink)}
+
+  /* ===== assessment extras ===== */
+  .ctrl-lab{font:700 12px var(--mono);color:var(--muted)}
+  .qsel{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff}
+  .ctbadge{padding:3px 9px;border-radius:999px;font-size:11px;color:#fff;background:#6b7a8d}
+  .lvbadge{padding:3px 9px;border-radius:999px;font-size:11px;border:1px solid var(--line);color:var(--muted)}
+  .confwrap{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#fdf8ef;border:1px dashed var(--warn);border-radius:10px}
+  .confwrap.show{display:flex}
+  .conf-lab{font:700 12px var(--mono);color:var(--warn)}
+  .conf-chip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:13px;cursor:pointer;background:#fff}
+  .conf-chip input{accent-color:var(--warn)}
+  .conf-chip:has(input:checked){border-color:var(--warn);background:#fdf3e3}
+  .rsec{font-size:13px;color:var(--muted);margin:16px 0 6px;font-weight:700;border-top:1px dashed var(--line);padding-top:12px}
+  .catbar.ct-de .ct i{background:var(--hw)} .catbar.ct-pa .ct i{background:var(--nw)}
+  .catbar.ct-ab .ct i{background:var(--sw)} .catbar.ct-al .ct i{background:var(--warn)}
+  .calib{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  @media(max-width:600px){.calib{grid-template-columns:1fr}}
+  .calib .ci{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .calib .ci b{font:800 18px var(--mono)}
+  .calib .ci.good{background:#eaf6ef;border-color:#bfe3cd} .calib .ci.warn{background:#fdf3e3;border-color:#f0d9a8} .calib .ci.bad{background:#fdeceb;border-color:#f3c9c5}
+  .review .ri{border:1px solid var(--line);border-left:3px solid var(--fail);border-radius:0 10px 10px 0;padding:10px 12px;margin-bottom:8px;font-size:13px}
+  .review .ri .rq{font-weight:700;margin-bottom:4px}
+  .review .ri .ra{margin:2px 0} .review .ri .ra .x{color:var(--fail);font-weight:700} .review .ri .ra .o{color:var(--ok);font-weight:700}
+  .review .ri .re{color:var(--muted);margin-top:4px}
+  .review .empty{color:var(--ok);font-size:13px;padding:8px 0;font-weight:600}
+
+  .entry-btn.ex{border-top-color:var(--ok)} .entry-btn.ex .ei,.entry-btn.ex b{color:var(--ok)}
+
+  /* ===== home architecture / navigation cards ===== */
+  .grp{display:flex;align-items:baseline;gap:10px;margin:16px 0 10px;padding-left:12px;border-left:4px solid var(--gold)}
+  .grp-t{font:800 16px var(--sans);color:var(--ink)}
+  .grp-s{font:600 12px var(--mono);color:var(--muted)}
+  .navgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:820px){.navgrid{grid-template-columns:1fr}}
+  .navcard{border:1px solid var(--line);border-top:4px solid var(--muted);border-radius:14px;padding:14px 16px;background:#fff;box-shadow:0 2px 10px rgba(20,40,70,.04);display:flex;flex-direction:column;gap:8px}
+  .navcard.hw{border-top-color:var(--hw)} .navcard.sw{border-top-color:var(--sw)} .navcard.nw{border-top-color:var(--nw)} .navcard.as{border-top-color:var(--warn)} .navcard.ex{border-top-color:var(--ok)}
+  .nc-h{display:flex;align-items:center;gap:10px}
+  .nc-ico{font:700 18px var(--mono);width:30px;text-align:center;flex:none}
+  .navcard.hw .nc-ico{color:var(--hw)} .navcard.sw .nc-ico{color:var(--sw)} .navcard.nw .nc-ico{color:var(--nw)} .navcard.as .nc-ico{color:var(--warn)} .navcard.ex .nc-ico{color:var(--ok)}
+  .nc-h b{font-size:15px;display:block;line-height:1.2} .nc-h span{font-size:12px;color:var(--muted)}
+  .nc-d{font-size:12.5px;color:var(--muted);margin:0;flex:1}
+  .nc-go{align-self:flex-start;margin-top:2px}
+  .btn.bas{background:var(--warn);border-color:var(--warn);color:#fff} .btn.bas:hover{background:#c47f1f;color:#fff}
+  .btn.bex{background:var(--ok);border-color:var(--ok);color:#fff} .btn.bex:hover{background:#2a8458;color:#fff}
+
+  /* ===== horizontal packet flow (overview) ===== */
+  .hflow{position:relative;margin-top:8px;overflow-x:auto;padding-bottom:4px}
+  .hnodes{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;min-width:640px}
+  .hnode{background:#fff;border:1px solid var(--line);border-top:4px solid var(--muted);border-radius:12px;padding:10px 8px;text-align:center;transition:.18s}
+  .hnode .hn-lv{font:700 11px var(--mono);color:#fff;display:inline-block;padding:3px 9px;border-radius:6px;background:var(--muted);margin-bottom:6px}
+  .hnode b{display:block;font-size:13px;line-height:1.3}
+  .hnode .hn-d{font-size:11px;color:var(--muted);display:block;margin-top:3px}
+  .hnode.l-app{border-top-color:var(--sw)} .hnode.l-app .hn-lv{background:var(--sw)}
+  .hnode.l-os{border-top-color:var(--swd)} .hnode.l-os .hn-lv{background:var(--swd)}
+  .hnode.l-drv{border-top-color:#7e62ad} .hnode.l-drv .hn-lv{background:#7e62ad}
+  .hnode.l-hw{border-top-color:var(--hw)} .hnode.l-hw .hn-lv{background:var(--hw)}
+  .hnode.l-net{border-top-color:var(--nw)} .hnode.l-net .hn-lv{background:var(--nw)}
+  .hnode.lit{box-shadow:0 0 0 3px var(--gold);transform:translateY(-4px)}
+  .hrail{position:relative;height:30px;margin-top:10px;min-width:640px}
+  .hrail::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;background:#e6ebf2;border-radius:3px;transform:translateY(-50%)}
+  .hpacket{position:absolute;top:50%;left:0;width:26px;height:26px;border-radius:50%;background:var(--hw);color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px var(--mono);transform:translate(-50%,-50%);transition:left .5s ease,background .3s;box-shadow:0 4px 10px rgba(20,40,70,.25);z-index:2}
+  .hpacket.resp{background:var(--ok)}
+
+  /* ===== teaching slides / 講義簡報 ===== */
+  .slides-cta{border-left:5px solid var(--hw)} .slides-cta.sw{border-left-color:var(--sw)} .slides-cta.nw{border-left-color:var(--nw)}
+  .sl-url{flex:1;min-width:220px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:14px}
+  .sl-url:focus{outline:none;border-color:var(--hw)}
+  .sl-viewer{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0c2620;height:460px;position:relative}
+  .sl-viewer iframe,.sl-viewer embed{width:100%;height:100%;border:0;display:block;background:#fff}
+  .sl-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9fb4ad;font-size:13px;text-align:center;padding:24px}
+  .flowsteps{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;font:700 12px var(--mono)}
+  .fstep{padding:5px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:#fff}
+  .fstep.done{border-color:var(--ok);color:var(--ok)}
+  .fstep.cur{background:var(--gold);border-color:var(--gold);color:#0c2620}
+  .fstep.go{cursor:pointer} .fstep.go:hover{border-color:var(--hw);color:var(--hw);background:#eef3fb}
+  .fsep{color:var(--muted)}
+
+  /* ===== unit learning-path sub-nav (微分層) ===== */
+  .unitnav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:8px 12px;background:#fff;border:1px solid var(--line);border-radius:12px}
+  .unit-lab{font:700 12px var(--mono);color:var(--muted)}
+  .unit-chip{font:600 13px var(--sans);border:1px solid var(--line);background:#fff;color:var(--ink);padding:6px 13px;border-radius:999px;cursor:pointer;transition:.14s}
+  .unit-chip:hover{border-color:var(--hw);color:var(--hw);background:#eef3fb}
+  .unit-chip.done{background:var(--ok);border-color:var(--ok);color:#fff}
+  .unit-chip.done:hover{background:#2a8458;color:#fff}
+  .unit-chip.done::before{content:"✓ "}
+
+  /* ===== built-in slide deck ===== */
+  .deck{border:1px solid var(--line);border-radius:12px;background:linear-gradient(135deg,#10312a,#0c2620);color:#eef;min-height:340px;padding:26px 30px;position:relative;overflow:auto}
+  .deck .ds-kicker{font:700 12px var(--mono);color:var(--gold);letter-spacing:.08em;margin-bottom:8px}
+  .deck h3.ds-title{margin:0 0 16px;font-size:23px;color:#fff;line-height:1.3}
+  .deck ul.ds-pts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+  .deck ul.ds-pts li{font-size:15px;line-height:1.55;padding-left:24px;position:relative;color:#dfeee9}
+  .deck ul.ds-pts li::before{content:"▸";position:absolute;left:0;color:var(--gold)}
+  .deck.cover{display:flex;flex-direction:column;justify-content:center}
+  .deck.cover h3.ds-title{font-size:30px}
+  .hl{color:#ff5b4a;font-weight:800}
+  .ds-ref{margin-top:16px;border-top:1px solid rgba(255,255,255,.14);padding-top:10px;font-size:12px;color:#9fb4ad;line-height:1.8}
+  .ds-ref a{color:#bfe3cd;text-decoration:underline}
+  .dov-stage .ds-ref{font-size:15px;margin-top:24px;padding-top:14px}
+  .deck-ctrl{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .deck-pos{font:700 13px var(--mono);color:var(--muted);min-width:56px;text-align:center}
+
+  /* fullscreen presentation overlay */
+  .deck-ov{position:fixed;inset:0;background:#0c2620;z-index:80;display:none;flex-direction:column}
+  .deck-ov.show{display:flex}
+  .dov-stage{flex:1;display:flex;flex-direction:column;justify-content:center;max-width:1000px;margin:0 auto;width:100%;padding:40px 48px;color:#eef;overflow:auto}
+  .dov-stage .ds-kicker{font:700 14px var(--mono);color:var(--gold);letter-spacing:.08em;margin-bottom:14px}
+  .dov-stage h3.ds-title{font-size:38px;color:#fff;margin:0 0 26px;line-height:1.25}
+  .dov-stage ul.ds-pts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:18px}
+  .dov-stage ul.ds-pts li{font-size:22px;line-height:1.5;padding-left:34px;position:relative;color:#e6f1ec}
+  .dov-stage ul.ds-pts li::before{content:"▸";position:absolute;left:0;color:var(--gold)}
+  .dov-bar{display:flex;align-items:center;gap:14px;padding:14px 24px;border-top:1px solid rgba(255,255,255,.12)}
+  .dov-bar .btn{background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.28)} .dov-bar .btn:hover{background:rgba(255,255,255,.18);color:#fff}
+  .dov-pos{color:#cdd;font:700 14px var(--mono)}
+
+  /* ===== 課後評量系統 ===== */
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:16px;background:#fff}
+  .segbtn{font:600 14px var(--sans);border:none;background:none;color:var(--muted);padding:9px 18px;cursor:pointer}
+  .segbtn.active{background:var(--hw);color:#fff}
+  .formgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:6px 0 12px}
+  @media(max-width:680px){.formgrid{grid-template-columns:1fr}}
+  .fld{display:flex;flex-direction:column;gap:4px;font-size:13px}
+  .fld span{font-weight:700;color:var(--muted)}
+  .fld input{font:inherit;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+  .fld input:focus{outline:none;border-color:var(--hw)}
+  .warnmsg{display:none;margin-top:10px;color:var(--fail);font-size:13px;font-weight:600}
+  .warnmsg.show{display:block}
+  .savedtag{font:700 12px var(--mono);color:var(--ok)}
+  .statcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:760px){.statcards{grid-template-columns:repeat(2,1fr)}}
+  .statcard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff;box-shadow:0 2px 10px rgba(20,40,70,.04)}
+  .statcard .v{font:800 26px/1 var(--mono);color:var(--hw)}
+  .statcard .k{font-size:12px;color:var(--muted);margin-top:4px}
+  .hist{display:flex;flex-direction:column;gap:8px}
+  .hbar{display:flex;align-items:center;gap:10px;font-size:13px}
+  .hbar .hl{width:72px;flex:none;font:700 12px var(--mono);color:var(--muted)}
+  .hbar .ht{flex:1;height:16px;border-radius:8px;background:#e6ebf2;overflow:hidden}
+  .hbar .ht i{display:block;height:100%;background:linear-gradient(90deg,var(--hw),var(--nw))}
+  .hbar .hn{width:34px;text-align:right;font:700 12px var(--mono);color:var(--muted);flex:none}
+  .tablewrap{overflow-x:auto}
+  .rtable{width:100%;border-collapse:collapse;font-size:13px;min-width:680px}
+  .rtable th,.rtable td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;white-space:nowrap}
+  .rtable th{background:#f1f5fa;color:var(--muted);font-size:12px}
+  .rtable td.sc{font-weight:700;font-family:var(--mono);color:var(--hw)}
+  .exam-cta{border-left:5px solid var(--hw)}
+  .exam-cta.sw{border-left-color:var(--sw)} .exam-cta.nw{border-left-color:var(--nw)}
+  .qtimer{font:700 13px var(--mono);color:var(--warn);background:#fdf3e3;border:1px solid #f0d9a8;border-radius:999px;padding:3px 10px}
+  .qtimer.warn{color:#fff;background:var(--fail);border-color:var(--fail)}
+
+  @media print{ .subbar,footer,.home-entry,.seg{display:none!important} }
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>計算機概論模擬平台</h1>
+    <div class="sub">以最基本的計算機架構出發——硬體・軟體・網路三大主軸，模擬縱向運作、安裝測試與故障排除，並提供即時評量。</div>
+    <span class="tag">虛擬介面熟習運作流程　·　先思考 → 後驗證　·　安裝・測試・除錯</span>
+  </div>
+</header>
+
+<!-- 分頁列已移除，改以首頁的子頁面按鈕與各子頁面「返回首頁」鍵導覽 -->
+
+<div class="wrap" style="padding-top:22px">
+
+<!-- ===================== 總覽（首頁） ===================== -->
+<section class="view active" id="view-overview">
+  <div class="panel" style="margin-bottom:18px">
+    <h2 style="color:var(--ink)">課程架構與導覽</h2>
+    <p class="lead">平台分為「學習模組」與「評量系統」兩大區。點各項目的「前往」按鈕進入對應子頁；每個子頁皆可一鍵返回首頁。</p>
+
+    <div class="grp"><span class="grp-t">學習模組</span><span class="grp-s">三大主軸・做中學</span></div>
+    <div class="navgrid">
+      <div class="navcard hw">
+        <div class="nc-h"><span class="nc-ico">▢</span><div><b>硬體 Hardware</b><span>看得見、摸得到的實體</span></div></div>
+        <p class="nc-d">CPU・記憶體・組裝　|　開機程序　|　故障診斷</p>
+        <button class="btn primary nc-go" data-goto="hardware">前往硬體 →</button>
+      </div>
+      <div class="navcard sw">
+        <div class="nc-h"><span class="nc-ico">◇</span><div><b>軟體 Software</b><span>驅動硬體運作的指令</span></div></div>
+        <p class="nc-d">韌體・OS・驅動・應用　|　分層安裝　|　故障排除</p>
+        <button class="btn sw nc-go" data-goto="software">前往軟體 →</button>
+      </div>
+      <div class="navcard nw">
+        <div class="nc-h"><span class="nc-ico">⬡</span><div><b>網路 Network</b><span>連到外面世界的通道</span></div></div>
+        <p class="nc-d">IP・DNS・閘道　|　連線設定　|　封包流向與測試</p>
+        <button class="btn nw nc-go" data-goto="network">前往網路 →</button>
+      </div>
+    </div>
+
+    <div class="grp"><span class="grp-t">評量系統</span><span class="grp-s">先思考後驗證</span></div>
+    <div class="navgrid">
+      <div class="navcard as">
+        <div class="nc-h"><span class="nc-ico">✓</span><div><b>即時評量</b><span>課堂・形成性</span></div></div>
+        <p class="nc-d">三大主軸混合出題　|　CT 四構面　|　即時計分回饋</p>
+        <button class="btn bas nc-go" data-goto="assess">前往即時評量 →</button>
+      </div>
+      <div class="navcard ex">
+        <div class="nc-h"><span class="nc-ico">▤</span><div><b>課後評量系統</b><span>課後・總結性</span></div></div>
+        <p class="nc-d">具名測驗（約 30 分）　|　複習錯題　|　教師成績統計</p>
+        <button class="btn bex nc-go" data-goto="exam">前往課後評量 →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:18px">
+    <h2 style="color:var(--ink)">橫向資料流：訊息封包雙向傳送</h2>
+    <p class="lead">點下方按鈕，看「存檔」封包由應用程式<b>向右</b>逐層傳到硬體與雲端（請求 ▶），再<b>向左</b>逐層回報成功（回應 ◀）——這就是各層之間的雙向協作。</p>
+    <div class="hflow" id="ovFlow">
+      <div class="hnodes" id="ovNodes">
+        <div class="hnode l-app"><span class="hn-lv">應用層</span><b>應用程式</b><span class="hn-d">按下「存檔」</span></div>
+        <div class="hnode l-os"><span class="hn-lv">系統層</span><b>作業系統</b><span class="hn-d">決定寫入位置</span></div>
+        <div class="hnode l-drv"><span class="hn-lv">驅動層</span><b>驅動程式</b><span class="hn-d">翻譯硬體訊號</span></div>
+        <div class="hnode l-hw"><span class="hn-lv">硬體層</span><b>SSD 儲存體</b><span class="hn-d">寫入磁碟</span></div>
+        <div class="hnode l-net"><span class="hn-lv">網路層</span><b>雲端同步</b><span class="hn-d">上傳備份</span></div>
+      </div>
+      <div class="hrail" id="ovRail"><div class="hpacket" id="ovPacket">▶</div></div>
+    </div>
+    <div class="arow" style="margin-top:14px">
+      <button class="btn primary" id="ovRun">▶ 模擬封包傳送（雙向）</button>
+      <span class="bsel" id="ovStatus" style="color:var(--muted)">待機中</span>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>核心觀念：</b>① <b>硬體</b>是身體，<b>軟體</b>是大腦下的指令，<b>網路</b>是對外的神經。② 任何一個動作都是「由上往下穿過每一層」再回報——少了中間任一層，動作就會卡在那裡。③ 學會在三層之間定位問題（是硬體壞、軟體沒裝、還是網路不通），就掌握了故障排除的關鍵。
+  </div>
+</section>
+
+<!-- ===================== 硬體 ===================== -->
+<section class="view" id="view-hardware">
+  <div class="subbar"><button class="btn back" data-back>← 返回首頁</button><span class="crumb">▢ 硬體</span><span class="spacer"></span><button class="btn" data-quiz="hw">✓ 本主軸速測</button></div>
+  <div class="unitnav">
+    <span class="unit-lab">學習路徑</span>
+    <button class="unit-chip" data-scroll="sim-hw">① 互動模擬</button>
+    <button class="unit-chip" data-scroll="lec-hw">② 教學講義</button>
+    <button class="unit-chip" data-scroll="quiz-hw">③ 課後評量</button>
+  </div>
+  <div class="arow" id="sim-hw" style="margin-bottom:16px">
+    <button class="btn power" id="powerBtn">⏻ 開機</button>
+    <span class="status off" id="statusBadge">已關機</span>
+    <button class="btn primary" id="demoBtn" disabled>▶ 示範運作流程</button>
+    <label class="chk"><input type="checkbox" id="predMode" /> 先思考後驗證（拔除元件前先預測）</label>
+    <span class="spacer"></span>
+    <button class="btn" id="resetBtn">全部復原</button>
+  </div>
+
+  <div class="grid gscene">
+    <div class="panel scene">
+      <h2>桌面情境 · 主機與周邊裝置</h2>
+      <p class="lead">點任一裝置<strong>或主機內元件（CPU／RAM／儲存體／顯示卡）</strong>可<strong>插上／拔除</strong>；按「開機」看開機程序動畫，再拔元件重開，觀察開機停在哪一步。</p>
+      <svg class="desk" viewBox="0 0 980 520" id="desk" role="img" aria-label="電腦桌面情境模擬">
+        <path id="path-mon" class="cable" d="M 420 150 C 330 150 270 158 222 175"/>
+        <path id="path-kb" class="cable" d="M 470 372 C 360 388 270 360 222 320"/>
+        <path class="cable" d="M 762 372 C 700 395 300 405 222 340"/>
+        <path class="cable" d="M 757 150 C 700 120 300 118 222 205"/>
+        <path class="cable" d="M 800 300 C 700 320 300 330 222 300"/>
+        <g id="tower">
+          <rect x="70" y="90" width="150" height="360" rx="12" fill="#37404a"/>
+          <rect x="70" y="90" width="150" height="360" rx="12" fill="none" stroke="#222a31" stroke-width="2"/>
+          <rect x="92" y="128" width="106" height="296" rx="6" fill="#11181d"/>
+          <g id="slot-cpu" class="core-slot" data-core="cpu" tabindex="0" role="button" aria-label="CPU（點擊插拔）"><rect class="fillrect" x="100" y="138" width="90" height="72" rx="6" fill="#445466" stroke="#1d2a35"/><text class="corelabel" x="145" y="170" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">CPU</text><text class="corelabel" x="145" y="188" text-anchor="middle" fill="#cfe0ee" font-size="9">中央處理器</text><rect class="emptybox" x="100" y="138" width="90" height="72" rx="6"/><text class="coretag" x="145" y="178" text-anchor="middle">CPU 插槽（空）</text><rect class="hit" x="100" y="138" width="90" height="72" fill="transparent"/></g>
+          <g id="slot-ram" class="core-slot" data-core="ram" tabindex="0" role="button" aria-label="RAM（點擊插拔）"><rect class="fillrect" x="100" y="218" width="90" height="36" rx="4" fill="#3f6d4f" stroke="#234534"/><text class="corelabel" x="145" y="241" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">RAM</text><rect class="emptybox" x="100" y="218" width="90" height="36" rx="4"/><text class="coretag" x="145" y="241" text-anchor="middle">RAM（空）</text><rect class="hit" x="100" y="218" width="90" height="36" fill="transparent"/></g>
+          <g id="slot-storage" class="core-slot" data-core="storage" tabindex="0" role="button" aria-label="儲存體（點擊插拔）"><rect class="fillrect" x="100" y="262" width="90" height="44" rx="4" fill="#3a4a59" stroke="#1d2a35"/><text class="corelabel" x="145" y="289" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">儲存體</text><rect class="emptybox" x="100" y="262" width="90" height="44" rx="4"/><text class="coretag" x="145" y="288" text-anchor="middle">儲存體（空）</text><rect class="hit" x="100" y="262" width="90" height="44" fill="transparent"/></g>
+          <g id="slot-gpu" class="core-slot" data-core="gpu" tabindex="0" role="button" aria-label="顯示卡（點擊插拔）"><rect class="fillrect" x="100" y="314" width="90" height="100" rx="4" fill="#534257" stroke="#2a2030"/><text class="corelabel" x="145" y="368" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">顯示卡</text><rect class="emptybox" x="100" y="314" width="90" height="100" rx="4"/><text class="coretag" x="145" y="366" text-anchor="middle">顯示卡（空）</text><rect class="hit" x="100" y="314" width="90" height="100" fill="transparent"/></g>
+          <circle cx="118" cy="110" r="11" fill="#2a323a" stroke="#1d2a35"/><text x="118" y="115" text-anchor="middle" fill="#cfe0ee" font-size="12">⏻</text>
+          <circle id="led-tower" class="led led-pwr" cx="150" cy="110" r="5" fill="#46505a"/>
+          <text x="170" y="114" fill="#aeb8c1" font-size="9" font-family="monospace">PWR</text>
+          <text x="145" y="442" text-anchor="middle" fill="#cfd6dd" font-size="11" font-weight="700">主機（系統單元）</text>
+        </g>
+        <g class="dev" id="dev-monitor" tabindex="0" role="button" aria-label="螢幕（輸出）">
+          <g class="body">
+            <rect x="418" y="56" width="304" height="206" rx="10" fill="#2a323a"/>
+            <rect id="scr-bg" x="434" y="70" width="272" height="166" rx="4" fill="#0a0f14"/>
+            <g id="scr-desktop" style="display:none">
+              <rect x="434" y="70" width="272" height="166" fill="#2b6cb0"/>
+              <rect x="434" y="214" width="272" height="22" fill="#1f2937"/>
+              <rect x="440" y="219" width="34" height="12" rx="2" fill="#9fb6cc"/>
+              <rect x="450" y="92" width="44" height="44" rx="6" fill="#ffffff" opacity=".85"/>
+              <rect x="450" y="142" width="60" height="8" rx="3" fill="#ffffff" opacity=".7"/>
+            </g>
+            <text id="scr-l1" x="570" y="146" text-anchor="middle" fill="#7fe6a6" font-size="13" font-family="monospace"></text>
+            <text id="scr-l2" x="570" y="168" text-anchor="middle" fill="#bfe6cf" font-size="11" font-family="monospace"></text>
+            <rect x="560" y="262" width="20" height="28" fill="#2a323a"/>
+            <rect x="516" y="288" width="108" height="11" rx="4" fill="#2a323a"/>
+            <circle id="led-monitor" class="led" cx="700" cy="250" r="4" fill="#46505a"/>
+            <text x="570" y="312" text-anchor="middle" fill="#5b6b7a" font-size="11" font-weight="700">螢幕（輸出）</text>
+          </g>
+          <rect class="hit" x="418" y="56" width="304" height="206"/>
+          <text class="untag" x="570" y="150" text-anchor="middle">未連接</text>
+        </g>
+        <g class="dev" id="dev-keyboard" tabindex="0" role="button" aria-label="鍵盤（輸入）">
+          <g class="body">
+            <rect x="470" y="336" width="290" height="74" rx="9" fill="#3a434d"/>
+            <g fill="#566069">
+              <rect x="482" y="348" width="20" height="15" rx="3"/><rect x="508" y="348" width="20" height="15" rx="3"/><rect x="534" y="348" width="20" height="15" rx="3"/><rect x="560" y="348" width="20" height="15" rx="3"/><rect x="586" y="348" width="20" height="15" rx="3"/><rect x="612" y="348" width="20" height="15" rx="3"/><rect x="638" y="348" width="20" height="15" rx="3"/><rect x="664" y="348" width="20" height="15" rx="3"/><rect x="690" y="348" width="20" height="15" rx="3"/><rect x="716" y="348" width="20" height="15" rx="3"/>
+              <rect x="482" y="369" width="46" height="15" rx="3"/><rect x="534" y="369" width="172" height="15" rx="3"/><rect x="712" y="369" width="24" height="15" rx="3"/>
+              <rect x="534" y="390" width="172" height="13" rx="3"/>
+            </g>
+            <circle id="led-keyboard" class="led" cx="724" cy="346" r="3.5" fill="#46505a"/>
+            <text x="612" y="406" text-anchor="middle" fill="#5b6b7a" font-size="11" font-weight="700">鍵盤（輸入）</text>
+          </g>
+          <rect class="hit" x="470" y="336" width="290" height="74"/>
+          <text class="untag" x="612" y="376" text-anchor="middle">×</text>
+        </g>
+        <g class="dev" id="dev-mouse" tabindex="0" role="button" aria-label="滑鼠（輸入）">
+          <g class="body">
+            <rect x="780" y="356" width="50" height="74" rx="22" fill="#3a434d"/>
+            <line x1="805" y1="360" x2="805" y2="388" stroke="#566069" stroke-width="2"/>
+            <circle id="led-mouse" class="led" cx="805" cy="372" r="3" fill="#46505a"/>
+            <text x="805" y="446" text-anchor="middle" fill="#5b6b7a" font-size="11" font-weight="700">滑鼠（輸入）</text>
+          </g>
+          <rect class="hit" x="780" y="356" width="50" height="74"/>
+          <text class="untag" x="805" y="396" text-anchor="middle">×</text>
+        </g>
+        <g class="dev" id="dev-speaker" tabindex="0" role="button" aria-label="喇叭（輸出）">
+          <g class="body">
+            <rect x="748" y="86" width="46" height="120" rx="7" fill="#3a434d"/>
+            <circle cx="771" cy="116" r="11" fill="#222a31"/><circle cx="771" cy="116" r="5" fill="#566069"/>
+            <circle id="spk-cone" cx="771" cy="168" r="16" fill="#222a31"/><circle cx="771" cy="168" r="8" fill="#566069"/>
+            <circle id="led-speaker" class="led" cx="771" cy="98" r="3.5" fill="#46505a"/>
+            <text x="771" y="222" text-anchor="middle" fill="#5b6b7a" font-size="11" font-weight="700">喇叭（輸出）</text>
+          </g>
+          <rect class="hit" x="748" y="86" width="46" height="120"/>
+          <text class="untag" x="771" y="150" text-anchor="middle">×</text>
+        </g>
+        <g class="dev" id="dev-printer" tabindex="0" role="button" aria-label="印表機（輸出）">
+          <g class="body">
+            <rect x="800" y="300" width="150" height="96" rx="9" fill="#3a434d"/>
+            <rect x="820" y="288" width="110" height="20" rx="3" fill="#2a323a"/>
+            <rect id="paper" x="828" y="262" width="94" height="34" rx="2" fill="#f4f6f8" stroke="#cfd6dd"/>
+            <rect x="816" y="330" width="118" height="10" rx="3" fill="#222a31"/>
+            <circle id="led-printer" class="led" cx="930" cy="318" r="4" fill="#46505a"/>
+            <text x="875" y="386" text-anchor="middle" fill="#5b6b7a" font-size="11" font-weight="700">印表機（輸出）</text>
+          </g>
+          <rect class="hit" x="800" y="288" width="150" height="108"/>
+          <text class="untag" x="875" y="350" text-anchor="middle">未連接</text>
+        </g>
+      </svg>
+    </div>
+    <div class="panel">
+      <h2>系統診斷面板</h2>
+      <p class="lead">以目前配置「開機後」能做什麼——綠＝可用，紅＝缺元件。</p>
+      <div class="post" style="min-height:0">
+        <div class="ttl">CONFIG · CAPABILITY</div>
+        <div id="caps"></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="block">
+    <h3 class="h2b">開機 / 關機程序 · 動畫紀錄</h3>
+    <div class="panel" style="padding:14px 16px">
+      <div class="post">
+        <div class="ttl" id="logTitle">POWER SEQUENCE</div>
+        <div id="log"><div class="logline" style="color:#5e7d6c">按上方「開機」開始開機程序動畫。</div></div>
+        <div class="cyc" id="cyc">
+          <div class="cyc-row">
+            <div class="stage" data-s="0"><b>擷取</b>Fetch</div>
+            <div class="stage" data-s="1"><b>解碼</b>Decode</div>
+            <div class="stage" data-s="2"><b>執行</b>Execute</div>
+            <div class="stage" data-s="3"><b>寫回</b>Writeback</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h3 class="h2b">主機板插槽組裝：空槽選裝 → 開機測試 → 評分修正</h3>
+    <div class="panel">
+      <p class="lead">點右側「零件盤」選一個零件，再點主機板上的<strong>空插槽</strong>安裝（再點一次已裝插槽可取出）。<strong>裝錯插槽會標紅</strong>，方便找錯與修正。</p>
+      <svg class="buildsvg" id="buildSvg" viewBox="0 0 720 360" role="img" aria-label="主機板插槽組裝"></svg>
+      <div class="arow" style="margin-top:10px">
+        <span class="bsel" id="bSel">目前選取：（無）</span>
+        <span class="spacer"></span>
+        <button class="btn" id="bReset">重新開始</button>
+        <button class="btn primary" id="bExec">執行（開機測試）</button>
+        <button class="btn" id="bScore" disabled>評分與建議</button>
+      </div>
+      <div class="runout" id="bOut" style="margin-top:10px;display:none"></div>
+      <div class="score-wrap" id="bScoreWrap">
+        <div style="display:flex;align-items:baseline;gap:10px"><span class="score-big" id="bScoreNum">0</span><span style="color:var(--muted)">/ 100　<b id="bScoreGrade" style="color:var(--hw)"></b></span></div>
+        <div class="score-bar"><i id="bScoreBar" style="width:0%"></i></div>
+        <ul class="score-list" id="bScoreList"></ul>
+        <div class="sug" id="bScoreSug"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="grid g2">
+      <div class="panel">
+        <h2>內部元件</h2>
+        <p class="lead">主機內的核心硬體。</p>
+        <div class="devcards" id="coreCards"></div>
+      </div>
+      <div class="panel">
+        <h2>周邊輸出入裝置</h2>
+        <p class="lead"><span class="io-in">輸入</span>＝把資料送進電腦；<span class="io-out">輸出</span>＝把結果送出給人。</p>
+        <div class="devcards" id="periphCards"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h3 class="h2b">硬體故障排除（互動診斷）</h3>
+    <div class="grid g2">
+      <div class="panel">
+        <h2>徵狀 → 你來判斷</h2>
+        <p class="lead">按「產生故障」，系統會描述一個徵狀；先想原因，再從選項中選出最可能的，按驗證對答案。</p>
+        <div id="hwTrouble"></div>
+      </div>
+      <div class="panel">
+        <h2>故障對照表</h2>
+        <p class="lead">常見硬體徵狀與處理方向。</p>
+        <table class="map">
+          <thead><tr><th>徵狀</th><th>可能原因</th><th class="c">處理建議</th></tr></thead>
+          <tbody>
+            <tr><td>按電源沒反應、無燈號</td><td>未供電</td><td class="c">檢查電源線與電源供應器</td></tr>
+            <tr><td>有電但黑屏、開機嗶聲</td><td>記憶體未插好</td><td class="c">重新插拔 RAM</td></tr>
+            <tr><td>風扇轉但無畫面、無嗶聲</td><td>CPU 未安裝／未供電</td><td class="c">檢查 CPU 安裝</td></tr>
+            <tr><td>顯示「找不到開機磁碟」</td><td>儲存體未接／無 OS</td><td class="c">檢查 SSD／硬碟與開機磁碟</td></tr>
+            <tr><td>主機運轉但螢幕「無訊號」</td><td>缺顯示卡或螢幕線未接</td><td class="c">檢查顯示卡與螢幕連接線</td></tr>
+            <tr><td>鍵盤打不了字、沒聲音</td><td>鍵盤／喇叭未連接</td><td class="c">重新連接對應周邊</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="lec-hw">
+    <h2 class="h2b">教學講義／簡報</h2>
+    <div class="panel slides-cta hw" data-slides="hw">
+      <div class="flowsteps">
+        <span class="fstep done">① 模擬展示</span><span class="fsep">→</span>
+        <span class="fstep cur">② 講義簡報</span><span class="fsep">→</span>
+        <span class="fstep go" data-exam="hw">③ 課後評量 →</span>
+      </div>
+      <div class="deck" id="deck-hw"></div>
+      <div class="deck-ctrl">
+        <button class="btn deck-prev" data-deck="hw">◀ 上一張</button>
+        <span class="deck-pos" id="dpos-hw">1 / 1</span>
+        <button class="btn deck-next" data-deck="hw">下一張 ▶</button>
+        <span class="spacer"></span>
+        <button class="btn primary deck-full" data-deck="hw">⛶ 全螢幕簡報</button>
+        <button class="btn deck-ext" data-ext="hw">＋ 外部講義</button>
+      </div>
+      <div class="ext-slides" id="ext-hw" style="display:none;margin-top:12px">
+        <p class="lead" style="margin-bottom:8px">或載入外部講義：貼上 Google 簡報／PDF／公開 PPT 連結，或開啟本機 PDF（連結會自動記住）。</p>
+        <div class="arow" style="margin-bottom:10px">
+          <input class="sl-url" type="text" placeholder="貼上 Google 簡報／PDF／公開 PPT 連結（https://…）" autocomplete="off">
+          <button class="btn primary sl-load">載入</button>
+          <label class="btn sl-filebtn">開啟本機 PDF<input type="file" accept="application/pdf" class="sl-file" hidden></label>
+          <button class="btn sl-open" disabled>開新視窗</button>
+          <button class="btn sl-clear" disabled>清除</button>
+        </div>
+        <div class="sl-viewer"><div class="sl-empty">尚未載入外部講義。</div></div>
+        <div class="sl-msg warnmsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="quiz-hw">
+    <h2 class="h2b">單元課後評量</h2>
+    <div class="panel exam-cta hw">
+      <p class="lead" style="margin-bottom:10px">上完「硬體」單元後，進行約 <b>30 分鐘</b> 的課後評量（需具名、計分並納入成績統計）；採「先思考後驗證」，作答後可複習錯題。</p>
+      <button class="btn primary" data-exam="hw">▤ 開始硬體單元課後評量（約 30 分鐘）</button>
+    </div>
+  </section>
+</section>
+
+<!-- ===================== 軟體 ===================== -->
+<section class="view" id="view-software">
+  <div class="subbar"><button class="btn back" data-back>← 返回首頁</button><span class="crumb">◇ 軟體</span><span class="spacer"></span><button class="btn" data-quiz="sw">✓ 本主軸速測</button></div>
+  <div class="unitnav">
+    <span class="unit-lab">學習路徑</span>
+    <button class="unit-chip" data-scroll="sim-sw">① 互動模擬</button>
+    <button class="unit-chip" data-scroll="lec-sw">② 教學講義</button>
+    <button class="unit-chip" data-scroll="quiz-sw">③ 課後評量</button>
+  </div>
+  <div class="panel sw" id="sim-sw" style="margin-bottom:18px">
+    <h2>軟體的五個子項目（由底層到上層）</h2>
+    <p class="lead">軟體不是只有「應用程式」。它由低到高分層，每一層都依賴下一層。</p>
+    <table class="map sw">
+      <thead><tr><th>層級</th><th>子項目</th><th class="c">負責什麼</th></tr></thead>
+      <tbody>
+        <tr><td>① 韌體</td><td>BIOS / UEFI</td><td class="c">內建在主機板，開機時最先執行，喚醒硬體</td></tr>
+        <tr><td>② 作業系統</td><td>Windows / Linux / macOS</td><td class="c">管理硬體、檔案、記憶體與所有程式的「總管」</td></tr>
+        <tr><td>③ 驅動程式</td><td>顯示卡／印表機驅動…</td><td class="c">讓作業系統「聽得懂」特定硬體</td></tr>
+        <tr><td>④ 公用程式</td><td>防毒／磁碟清理…</td><td class="c">維護與保護系統的工具</td></tr>
+        <tr><td>⑤ 應用程式</td><td>瀏覽器／文書／遊戲</td><td class="c">使用者真正在用的軟體</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <section class="block">
+    <h3 class="h2b sw">軟體安裝模擬：依正確順序安裝 → 啟動測試</h3>
+    <div class="grid g2">
+      <div class="panel sw">
+        <h2>安裝佇列（順序很重要）</h2>
+        <p class="lead">軟體必須由底層往上裝。<strong>跳過下層直接裝上層會失敗</strong>。韌體已內建，請依序安裝其餘四層，再按「啟動測試」。</p>
+        <div class="swstack" id="swStack"></div>
+        <div class="arow" style="margin-top:12px">
+          <button class="btn sw" id="swBoot">▶ 啟動測試</button>
+          <button class="btn" id="swReset">重新安裝</button>
+        </div>
+        <div class="runout" id="swOut" style="margin-top:10px;display:none"></div>
+      </div>
+      <div class="panel sw">
+        <h2>縱向運作：一個指令往下穿過軟體層</h2>
+        <p class="lead">系統裝好後，按按鈕看「開啟相片」如何由應用程式逐層下達到硬體。少裝某層會卡住。</p>
+        <div class="vstack" id="swFlow">
+          <div class="layer l-app"><span class="lv">應用</span><div class="lt"><b>相片應用程式</b><span>使用者點兩下開啟圖片</span></div></div>
+          <div class="flowarrow">↓</div>
+          <div class="layer l-os"><span class="lv">系統</span><div class="lt"><b>作業系統</b><span>找到檔案、配置記憶體</span></div></div>
+          <div class="flowarrow">↓</div>
+          <div class="layer l-drv"><span class="lv">驅動</span><div class="lt"><b>顯示卡驅動程式</b><span>把畫面指令翻譯給 GPU</span></div></div>
+          <div class="flowarrow">↓</div>
+          <div class="layer l-hw"><span class="lv">硬體</span><div class="lt"><b>GPU + 螢幕</b><span>實際把相片畫出來</span></div></div>
+        </div>
+        <div class="arow" style="margin-top:12px">
+          <button class="btn sw" id="swRun">▶ 模擬「開啟相片」</button>
+          <span class="bsel" id="swRunStatus" style="color:var(--muted)">待機中</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h3 class="h2b sw">軟體故障排除（互動診斷）</h3>
+    <div class="grid g2">
+      <div class="panel sw">
+        <h2>徵狀 → 你來判斷</h2>
+        <p class="lead">按「產生故障」，先想是哪一層出問題，再選出原因並驗證。</p>
+        <div id="swTrouble"></div>
+      </div>
+      <div class="panel sw">
+        <h2>故障對照表</h2>
+        <p class="lead">常見軟體徵狀與處理方向。</p>
+        <table class="map sw">
+          <thead><tr><th>徵狀</th><th>可能原因</th><th class="c">處理建議</th></tr></thead>
+          <tbody>
+            <tr><td>開機卡在廠商標誌、無法進系統</td><td>作業系統損毀</td><td class="c">修復或重新安裝 OS</td></tr>
+            <tr><td>印表機接了卻印不出來</td><td>缺少／錯誤的驅動程式</td><td class="c">安裝對應裝置驅動</td></tr>
+            <tr><td>新顯示卡裝了畫質卻很差</td><td>顯示卡驅動未更新</td><td class="c">更新顯示卡驅動</td></tr>
+            <tr><td>程式一開就閃退／當機</td><td>程式毀損或版本不相容</td><td class="c">重裝程式或更新版本</td></tr>
+            <tr><td>電腦變超慢、跳出可疑視窗</td><td>惡意程式／病毒</td><td class="c">用防毒公用程式掃描</td></tr>
+            <tr><td>應用程式說「記憶體不足」</td><td>同時開太多、RAM 不夠</td><td class="c">關閉程式或加裝 RAM</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="lec-sw">
+    <h2 class="h2b sw">教學講義／簡報</h2>
+    <div class="panel slides-cta sw" data-slides="sw">
+      <div class="flowsteps">
+        <span class="fstep done">① 模擬展示</span><span class="fsep">→</span>
+        <span class="fstep cur">② 講義簡報</span><span class="fsep">→</span>
+        <span class="fstep go" data-exam="sw">③ 課後評量 →</span>
+      </div>
+      <div class="deck" id="deck-sw"></div>
+      <div class="deck-ctrl">
+        <button class="btn deck-prev" data-deck="sw">◀ 上一張</button>
+        <span class="deck-pos" id="dpos-sw">1 / 1</span>
+        <button class="btn deck-next" data-deck="sw">下一張 ▶</button>
+        <span class="spacer"></span>
+        <button class="btn sw deck-full" data-deck="sw">⛶ 全螢幕簡報</button>
+        <button class="btn deck-ext" data-ext="sw">＋ 外部講義</button>
+      </div>
+      <div class="ext-slides" id="ext-sw" style="display:none;margin-top:12px">
+        <p class="lead" style="margin-bottom:8px">或載入外部講義：貼上 Google 簡報／PDF／公開 PPT 連結，或開啟本機 PDF（連結會自動記住）。</p>
+        <div class="arow" style="margin-bottom:10px">
+          <input class="sl-url" type="text" placeholder="貼上 Google 簡報／PDF／公開 PPT 連結（https://…）" autocomplete="off">
+          <button class="btn sw sl-load">載入</button>
+          <label class="btn sl-filebtn">開啟本機 PDF<input type="file" accept="application/pdf" class="sl-file" hidden></label>
+          <button class="btn sl-open" disabled>開新視窗</button>
+          <button class="btn sl-clear" disabled>清除</button>
+        </div>
+        <div class="sl-viewer"><div class="sl-empty">尚未載入外部講義。</div></div>
+        <div class="sl-msg warnmsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="quiz-sw">
+    <h2 class="h2b sw">單元課後評量</h2>
+    <div class="panel exam-cta sw">
+      <p class="lead" style="margin-bottom:10px">上完「軟體」單元後，進行約 <b>30 分鐘</b> 的課後評量（需具名、計分並納入成績統計）；採「先思考後驗證」，作答後可複習錯題。</p>
+      <button class="btn sw" data-exam="sw">▤ 開始軟體單元課後評量（約 30 分鐘）</button>
+    </div>
+  </section>
+</section>
+
+<!-- ===================== 網路 ===================== -->
+<section class="view" id="view-network">
+  <div class="subbar"><button class="btn back" data-back>← 返回首頁</button><span class="crumb">⬡ 網路</span><span class="spacer"></span><button class="btn" data-quiz="nw">✓ 本主軸速測</button></div>
+  <div class="unitnav">
+    <span class="unit-lab">學習路徑</span>
+    <button class="unit-chip" data-scroll="sim-nw">① 互動模擬</button>
+    <button class="unit-chip" data-scroll="lec-nw">② 教學講義</button>
+    <button class="unit-chip" data-scroll="quiz-nw">③ 課後評量</button>
+  </div>
+  <div class="panel nw" id="sim-nw" style="margin-bottom:18px">
+    <h2>網路的六個子項目</h2>
+    <p class="lead">要讓電腦上網，下列設定缺一不可。每一項負責通訊路上的一段。</p>
+    <table class="map nw">
+      <thead><tr><th>子項目</th><th>作用</th><th class="c">少了它會怎樣</th></tr></thead>
+      <tbody>
+        <tr><td>網路卡 NIC</td><td>電腦對外通訊的硬體出入口</td><td class="c">完全沒有網路</td></tr>
+        <tr><td>IP 位址</td><td>電腦在網路上的門牌</td><td class="c">無法被找到、無法連線</td></tr>
+        <tr><td>子網路遮罩</td><td>分辨「自己這區」與「外面」</td><td class="c">區網／外網判斷錯誤</td></tr>
+        <tr><td>預設閘道 Gateway</td><td>通往外面網路的出口（路由器）</td><td class="c">只能連區網，無法上網</td></tr>
+        <tr><td>DNS 伺服器</td><td>把網域名稱翻成 IP（電話簿）</td><td class="c">IP 通但打不開網站</td></tr>
+        <tr><td>數據機／路由器</td><td>連到 ISP，把家裡接上網際網路</td><td class="c">整個家庭斷網</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <section class="block">
+    <h3 class="h2b nw">連線設定模擬：填參數 → 連線測試（ping）</h3>
+    <div class="grid g2">
+      <div class="panel nw">
+        <h2>網路設定</h2>
+        <p class="lead">為這台電腦選擇設定值（有些選項是錯的，故意讓你練習找錯）。設定後按「連線測試」。</p>
+        <div class="netform" id="netForm">
+          <div class="nf"><label>網路卡 NIC</label>
+            <select data-key="nic"><option value="ok">已安裝並啟用</option><option value="bad">停用／未安裝</option></select></div>
+          <div class="nf"><label>IP 位址</label>
+            <select data-key="ip"><option value="ok">192.168.1.20</option><option value="bad">未取得（0.0.0.0）</option></select></div>
+          <div class="nf"><label>子網路遮罩</label>
+            <select data-key="mask"><option value="ok">255.255.255.0</option><option value="bad">255.0.0.0（錯）</option></select></div>
+          <div class="nf"><label>預設閘道 Gateway</label>
+            <select data-key="gw"><option value="ok">192.168.1.1</option><option value="bad">192.168.9.1（錯網段）</option></select></div>
+          <div class="nf"><label>DNS 伺服器</label>
+            <select data-key="dns"><option value="ok">8.8.8.8</option><option value="bad">未設定</option></select></div>
+          <div class="nf"><label>路由器 / 對外線路</label>
+            <select data-key="router"><option value="ok">已連上 ISP</option><option value="bad">斷線</option></select></div>
+        </div>
+        <div class="arow" style="margin-top:12px">
+          <button class="btn nw" id="netTest">▶ 連線測試 ping</button>
+          <button class="btn" id="netRandom">隨機出題（找錯）</button>
+          <button class="btn" id="netFix">一鍵修正</button>
+        </div>
+        <div class="pingout" id="pingOut" style="margin-top:10px">尚未測試。設定完成後按「連線測試」。</div>
+      </div>
+      <div class="panel nw">
+        <h2>封包流向：你的網頁請求怎麼出去又回來</h2>
+        <p class="lead">連線成功後，按按鈕看一次「打開網站」的封包旅程。哪一段斷掉，動畫就停在那裡。</p>
+        <svg class="netscene" id="netSvg" viewBox="0 0 720 300" role="img" aria-label="網路封包流向"></svg>
+        <div class="arow" style="margin-top:12px">
+          <button class="btn nw" id="netFlow">▶ 模擬網頁請求</button>
+          <span class="bsel" id="netFlowStatus" style="color:var(--muted)">待機中</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h3 class="h2b nw">網路故障排除（互動診斷）</h3>
+    <div class="grid g2">
+      <div class="panel nw">
+        <h2>徵狀 → 你來判斷</h2>
+        <p class="lead">按「產生故障」，先判斷斷在哪一段，再選原因並驗證。</p>
+        <div id="nwTrouble"></div>
+      </div>
+      <div class="panel nw">
+        <h2>故障對照表</h2>
+        <p class="lead">常見網路徵狀與處理方向。</p>
+        <table class="map nw">
+          <thead><tr><th>徵狀</th><th>可能原因</th><th class="c">處理建議</th></tr></thead>
+          <tbody>
+            <tr><td>完全沒有任何網路圖示</td><td>網路卡停用／未安裝</td><td class="c">啟用或安裝網路卡</td></tr>
+            <tr><td>IP 顯示 0.0.0.0 或 169.254.x.x</td><td>沒拿到 IP（DHCP 失敗）</td><td class="c">重新取得 IP、檢查路由器</td></tr>
+            <tr><td>能連印表機但不能上網</td><td>閘道錯誤或路由器斷線</td><td class="c">檢查 Gateway 與對外線路</td></tr>
+            <tr><td>IP 能 ping 通但網站打不開</td><td>DNS 沒設定或故障</td><td class="c">設定正確的 DNS</td></tr>
+            <tr><td>整個家裡都斷網</td><td>數據機／ISP 線路問題</td><td class="c">重開數據機、聯絡 ISP</td></tr>
+            <tr><td>網路很慢、常斷線</td><td>訊號弱／頻寬被占用</td><td class="c">靠近路由器、檢查占用</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="lec-nw">
+    <h2 class="h2b nw">教學講義／簡報</h2>
+    <div class="panel slides-cta nw" data-slides="nw">
+      <div class="flowsteps">
+        <span class="fstep done">① 模擬展示</span><span class="fsep">→</span>
+        <span class="fstep cur">② 講義簡報</span><span class="fsep">→</span>
+        <span class="fstep go" data-exam="nw">③ 課後評量 →</span>
+      </div>
+      <div class="deck" id="deck-nw"></div>
+      <div class="deck-ctrl">
+        <button class="btn deck-prev" data-deck="nw">◀ 上一張</button>
+        <span class="deck-pos" id="dpos-nw">1 / 1</span>
+        <button class="btn deck-next" data-deck="nw">下一張 ▶</button>
+        <span class="spacer"></span>
+        <button class="btn nw deck-full" data-deck="nw">⛶ 全螢幕簡報</button>
+        <button class="btn deck-ext" data-ext="nw">＋ 外部講義</button>
+      </div>
+      <div class="ext-slides" id="ext-nw" style="display:none;margin-top:12px">
+        <p class="lead" style="margin-bottom:8px">或載入外部講義：貼上 Google 簡報／PDF／公開 PPT 連結，或開啟本機 PDF（連結會自動記住）。</p>
+        <div class="arow" style="margin-bottom:10px">
+          <input class="sl-url" type="text" placeholder="貼上 Google 簡報／PDF／公開 PPT 連結（https://…）" autocomplete="off">
+          <button class="btn nw sl-load">載入</button>
+          <label class="btn sl-filebtn">開啟本機 PDF<input type="file" accept="application/pdf" class="sl-file" hidden></label>
+          <button class="btn sl-open" disabled>開新視窗</button>
+          <button class="btn sl-clear" disabled>清除</button>
+        </div>
+        <div class="sl-viewer"><div class="sl-empty">尚未載入外部講義。</div></div>
+        <div class="sl-msg warnmsg" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </section>
+  <section class="block" id="quiz-nw">
+    <h2 class="h2b nw">單元課後評量</h2>
+    <div class="panel exam-cta nw">
+      <p class="lead" style="margin-bottom:10px">上完「網路」單元後，進行約 <b>30 分鐘</b> 的課後評量（需具名、計分並納入成績統計）；採「先思考後驗證」，作答後可複習錯題。</p>
+      <button class="btn nw" data-exam="nw">▤ 開始網路單元課後評量（約 30 分鐘）</button>
+    </div>
+  </section>
+</section>
+
+<!-- ===================== 即時評量 ===================== -->
+<section class="view" id="view-assess">
+  <div class="subbar"><button class="btn back" data-back>← 返回首頁</button><span class="crumb">✓ 即時評量</span></div>
+  <div class="panel" style="margin-bottom:18px">
+    <h2 style="color:var(--ink)">即時評量系統</h2>
+    <p class="lead">三大主軸混合出題，每題對應運算思維（CT）四構面與難度。採「先思考後驗證」：先選答案、再標<b>把握度</b>，按驗證當場顯示對錯與解析；結束後給總分、各主軸與 CT 構面表現、把握度校準與錯題回顧，並可匯出作答紀錄。</p>
+    <div class="arow" style="margin-bottom:8px">
+      <span class="ctrl-lab">主軸</span>
+      <label class="chk"><input type="radio" name="qcat" value="all" checked> 綜合</label>
+      <label class="chk"><input type="radio" name="qcat" value="hw"> 硬體</label>
+      <label class="chk"><input type="radio" name="qcat" value="sw"> 軟體</label>
+      <label class="chk"><input type="radio" name="qcat" value="nw"> 網路</label>
+    </div>
+    <div class="arow">
+      <span class="ctrl-lab">難度</span>
+      <label class="chk"><input type="radio" name="qlevel" value="all" checked> 全部</label>
+      <label class="chk"><input type="radio" name="qlevel" value="1"> 基礎</label>
+      <label class="chk"><input type="radio" name="qlevel" value="2"> 進階</label>
+      <span class="ctrl-lab" style="margin-left:10px">題數</span>
+      <select id="qCount" class="qsel"><option value="8">8 題</option><option value="12" selected>12 題</option><option value="0">全部</option></select>
+      <span class="spacer"></span>
+      <button class="btn primary" id="qStart">開始測驗</button>
+    </div>
+  </div>
+
+  <div id="quizArea" style="display:none">
+    <div class="qprog"><i id="qProg" style="width:0%"></i></div>
+    <div class="qbox">
+      <div class="qmeta"><span id="qIdx">第 1 / 10 題</span><span class="qcat hw" id="qCatBadge">硬體</span><span class="ctbadge" id="qCTBadge">拆解</span><span class="lvbadge" id="qLvBadge">基礎</span><span class="spacer"></span><span id="qScoreNow">目前 0 分</span></div>
+      <p class="qstem" id="qStem">—</p>
+      <div class="opts" id="qOpts"></div>
+      <div class="confwrap" id="qConfWrap">
+        <span class="conf-lab">先思考·把握度</span>
+        <label class="conf-chip"><input type="radio" name="qconf" value="3"> 很有把握</label>
+        <label class="conf-chip"><input type="radio" name="qconf" value="2"> 普通</label>
+        <label class="conf-chip"><input type="radio" name="qconf" value="1"> 用猜的</label>
+      </div>
+      <div class="explain" id="qExplain"></div>
+      <div class="arow">
+        <button class="btn primary" id="qVerify" disabled>驗證</button>
+        <button class="btn" id="qNext" style="display:none">下一題 →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="quizResult" style="display:none">
+    <div class="qbox">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px">
+        <span class="score-big" id="rScore">0</span>
+        <span style="color:var(--muted)">/ 100　<b id="rGrade" style="color:var(--hw)"></b></span>
+      </div>
+      <div class="score-bar"><i id="rBar" style="width:0%"></i></div>
+      <h3 class="rsec">各主軸表現</h3>
+      <div class="catbars" id="rCats"></div>
+      <h3 class="rsec">運算思維（CT）四構面</h3>
+      <div class="catbars" id="rCT"></div>
+      <h3 class="rsec">把握度校準（先思考 ↔ 實際結果）</h3>
+      <div id="rCalib" class="calib"></div>
+      <div class="sug" id="rSug"></div>
+      <h3 class="rsec">錯題回顧</h3>
+      <div id="rReview" class="review"></div>
+      <div class="arow" style="margin-top:14px">
+        <button class="btn primary" id="qAgain">再測一次</button>
+        <button class="btn" id="qExportCsv">⬇ 下載作答紀錄（CSV）</button>
+        <button class="btn" id="qPrint">🖶 列印成績單</button>
+      </div>
+    </div>
+  </div>
+</section>
+<!--SW_NW_ASSESS-->
+
+<!-- ===================== 課後評量系統 ===================== -->
+<section class="view" id="view-exam">
+  <div class="subbar"><button class="btn back" data-back>← 返回首頁</button><span class="crumb">▤ 課後評量系統</span></div>
+
+  <div class="seg" id="examSeg">
+    <button class="segbtn active" data-seg="student">學生測驗</button>
+    <button class="segbtn" data-seg="stats">成績統計（教師）</button>
+  </div>
+
+  <!-- 學生測驗 -->
+  <div id="examStudent">
+    <div class="panel" id="exLogin" style="margin-bottom:18px">
+      <h2 style="color:var(--ink)">課後評量・開始測驗</h2>
+      <p class="lead">輸入身分後作答，成績與把握度會自動記錄供教師統計。採「先思考後驗證」，作答後可複習錯題；勾選「複習模式」則為不計分練習。本測驗<b>限時約 30 分鐘</b>，時間到自動交卷。</p>
+      <div class="formgrid">
+        <label class="fld"><span>姓名 ＊</span><input id="exName" type="text" placeholder="王小明"></label>
+        <label class="fld"><span>學號 ＊</span><input id="exId" type="text" placeholder="411xxxxx"></label>
+        <label class="fld"><span>班級</span><input id="exCls" type="text" placeholder="資管一甲"></label>
+      </div>
+      <div class="arow" style="margin-bottom:8px">
+        <span class="ctrl-lab">範圍</span>
+        <label class="chk"><input type="radio" name="excat" value="all" checked> 綜合</label>
+        <label class="chk"><input type="radio" name="excat" value="hw"> 硬體</label>
+        <label class="chk"><input type="radio" name="excat" value="sw"> 軟體</label>
+        <label class="chk"><input type="radio" name="excat" value="nw"> 網路</label>
+      </div>
+      <div class="arow">
+        <span class="ctrl-lab">難度</span>
+        <label class="chk"><input type="radio" name="exlevel" value="all" checked> 全部</label>
+        <label class="chk"><input type="radio" name="exlevel" value="1"> 基礎</label>
+        <label class="chk"><input type="radio" name="exlevel" value="2"> 進階</label>
+        <span class="ctrl-lab" style="margin-left:10px">題數</span>
+        <select id="exCount" class="qsel"><option value="5">5 題</option><option value="10" selected>10 題</option><option value="0">全部</option></select>
+        <label class="chk" style="margin-left:10px"><input type="checkbox" id="exReview"> 複習模式（不計入統計）</label>
+        <span class="spacer"></span>
+        <button class="btn primary" id="exStart">開始測驗</button>
+      </div>
+      <div id="exMsg" class="warnmsg"></div>
+    </div>
+
+    <div id="exArea" style="display:none">
+      <div class="qprog"><i id="exProg" style="width:0%"></i></div>
+      <div class="qbox">
+        <div class="qmeta"><span id="exIdx">第 1 / 10 題</span><span class="qcat hw" id="exCatBadge">硬體</span><span class="ctbadge" id="exCTBadge">拆解</span><span class="lvbadge" id="exLvBadge">基礎</span><span class="spacer"></span><span class="qtimer" id="exTimer" style="display:none"></span><span id="exWho"></span></div>
+        <p class="qstem" id="exStem">—</p>
+        <div class="opts" id="exOpts"></div>
+        <div class="confwrap" id="exConfWrap"><span class="conf-lab">先思考·把握度</span><label class="conf-chip"><input type="radio" name="exconf" value="3"> 很有把握</label><label class="conf-chip"><input type="radio" name="exconf" value="2"> 普通</label><label class="conf-chip"><input type="radio" name="exconf" value="1"> 用猜的</label></div>
+        <div class="explain" id="exExplain"></div>
+        <div class="arow"><button class="btn primary" id="exVerify" disabled>驗證</button><button class="btn" id="exNext" style="display:none">下一題 →</button></div>
+      </div>
+    </div>
+
+    <div id="exResult" style="display:none">
+      <div class="qbox">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px"><span class="score-big" id="exScore">0</span><span style="color:var(--muted)">/ 100　<b id="exGrade" style="color:var(--hw)"></b></span><span class="spacer"></span><span id="exSaved" class="savedtag"></span></div>
+        <div class="score-bar"><i id="exBar" style="width:0%"></i></div>
+        <h3 class="rsec">各主軸表現</h3><div class="catbars" id="exCats"></div>
+        <h3 class="rsec">運算思維（CT）四構面</h3><div class="catbars" id="exCT"></div>
+        <h3 class="rsec">把握度校準</h3><div id="exCalib" class="calib"></div>
+        <div class="sug" id="exSug"></div>
+        <h3 class="rsec">錯題複習</h3><div id="exReviewList" class="review"></div>
+        <div class="arow" style="margin-top:14px">
+          <button class="btn primary" id="exAgain">再測一次</button>
+          <button class="btn" id="exRetryWrong">複習錯題</button>
+          <button class="btn" id="exMyCsv">⬇ 我的成績單（CSV）</button>
+          <button class="btn" id="exPrint">🖶 列印</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成績統計（教師） -->
+  <div id="examStats" style="display:none">
+    <div class="panel" id="stLock" style="margin-bottom:18px">
+      <h2 style="color:var(--ink)">成績統計（教師）· 需要密碼</h2>
+      <p class="lead">此區為教師專用，請輸入密碼後檢視全班課後評量成績統計。</p>
+      <div class="arow">
+        <input id="stPw" type="password" style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:14px;max-width:240px" placeholder="教師密碼" autocomplete="off">
+        <button class="btn primary" id="stEnter">進入</button>
+        <span id="stPwMsg" class="warnmsg" style="margin-top:0"></span>
+      </div>
+    </div>
+    <div id="stContent" style="display:none">
+    <div class="panel" style="margin-bottom:18px">
+      <h2 style="color:var(--ink)">成績統計（教師）</h2>
+      <p class="lead">彙整本機（瀏覽器）已記錄的課後評量成績；可匯出 CSV 或清除。紀錄存於瀏覽器 localStorage，建議於同一機器或匯出彙整。</p>
+      <div class="arow">
+        <button class="btn" id="stRefresh">↻ 重新整理</button>
+        <button class="btn" id="stCsv">⬇ 匯出全部成績（CSV）</button>
+        <span class="spacer"></span>
+        <button class="btn" id="stClear" style="border-color:var(--fail);color:var(--fail)">清除所有紀錄</button>
+      </div>
+    </div>
+    <div id="stEmpty" class="panel" style="display:none;color:var(--muted)">目前尚無紀錄。請至「學生測驗」完成一次課後評量。</div>
+    <div id="stBody">
+      <div class="statcards" id="stCards"></div>
+      <div class="grid g2" style="margin-top:18px">
+        <div class="panel"><h2 style="color:var(--ink)">分數分布</h2><div id="stHist" class="hist"></div></div>
+        <div class="panel"><h2 style="color:var(--ink)">主軸・CT 平均答對率</h2><div class="catbars" id="stCat"></div><div class="catbars" id="stCT" style="margin-top:10px"></div></div>
+      </div>
+      <div class="panel" style="margin-top:18px"><h2 style="color:var(--ink)">作答紀錄</h2><div class="tablewrap"><table class="rtable" id="stTable"></table></div></div>
+    </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- predict modal -->
+<div class="ov" id="ov">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <h3 id="mTitle">先思考</h3>
+    <p class="m" id="mDesc"></p>
+    <div class="verdict" id="verdict"></div>
+    <div class="mopts" id="mopts"></div>
+    <div class="acts"><button class="btn" id="mCancel">取消</button><button class="btn primary" id="mVerify">驗證</button></div>
+  </div>
+</div>
+
+<footer>單一 HTML 檔 · 零後端 · 可離線使用與部署　|　計算機概論模擬平台（硬體・軟體・網路）</footer>
+
+<script>
+/* ============================================================
+   0) 共用工具 + 分頁導覽
+============================================================ */
+var REDUCE = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+function $(id){ return document.getElementById(id); }
+function delay(ms){ return REDUCE?100:ms; }
+
+(function nav(){
+  var tabs=[].slice.call(document.querySelectorAll(".tab"));
+  function show(view){
+    tabs.forEach(function(t){ t.classList.toggle("active", t.getAttribute("data-view")===view); });
+    document.querySelectorAll(".view").forEach(function(v){ v.classList.toggle("active", v.id==="view-"+view); });
+    window.scrollTo({top:0,behavior:REDUCE?"auto":"smooth"});
+  }
+  tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.getAttribute("data-view")); }); });
+  document.querySelectorAll("[data-goto]").forEach(function(p){
+    p.addEventListener("click", function(){ show(p.getAttribute("data-goto")); });
+  });
+  document.querySelectorAll("[data-back]").forEach(function(b){
+    b.addEventListener("click", function(){ show("overview"); });
+  });
+  document.querySelectorAll("[data-scroll]").forEach(function(b){
+    b.addEventListener("click", function(){ var el=document.getElementById(b.getAttribute("data-scroll")); if(el) el.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"start"}); });
+  });
+  window.__show=show;
+})();
+
+/* ============================================================
+   1) 總覽：縱向流程動畫
+============================================================ */
+(function overview(){
+  var nodes=[].slice.call(document.querySelectorAll("#ovNodes .hnode"));
+  var packet=$("ovPacket"), rail=$("ovRail"), st=$("ovStatus"), btn=$("ovRun"), running=false;
+  if(!nodes.length||!packet||!rail) return;
+  function center(i){ var n=nodes[i].getBoundingClientRect(), r=rail.getBoundingClientRect(); return (n.left-r.left+n.width/2); }
+  function place(i){ packet.style.left=center(i)+"px"; }
+  function lightOnly(i){ nodes.forEach(function(n,k){ n.classList.toggle("lit", k===i); }); }
+  function rest(){ packet.classList.remove("resp"); packet.textContent="▶"; nodes.forEach(function(n){ n.classList.remove("lit"); }); place(0); }
+  place(0);
+  window.addEventListener("resize", function(){ if(!running) place(0); });
+  btn.addEventListener("click", function(){
+    if(running) return; running=true; btn.disabled=true; rest();
+    var seq=[
+      {i:0,resp:false,m:"應用程式發出『存檔』請求…"},
+      {i:1,resp:false,m:"作業系統：決定寫入位置…"},
+      {i:2,resp:false,m:"驅動程式：翻譯成硬體訊號…"},
+      {i:3,resp:false,m:"SSD：實際寫入資料…"},
+      {i:4,resp:false,m:"（選用）同步上傳雲端備份…"},
+      {i:3,resp:true ,m:"◀ 硬體回報寫入成功…"},
+      {i:2,resp:true ,m:"◀ 驅動程式回報…"},
+      {i:1,resp:true ,m:"◀ 作業系統確認…"},
+      {i:0,resp:true ,m:"✔ 存檔完成，已回報應用程式"}
+    ], k=0;
+    (function step(){
+      if(k>=seq.length){ running=false; btn.disabled=false; return; }
+      var s=seq[k];
+      packet.classList.toggle("resp", s.resp);
+      packet.textContent = s.resp?"◀":"▶";
+      place(s.i); lightOnly(s.i);
+      st.textContent=s.m; st.style.color=(k===seq.length-1)?"var(--ok)":"var(--muted)";
+      k++; setTimeout(step, delay(720));
+    })();
+  });
+})();
+
+/* ============================================================
+   2) 硬體模組（開機/關機/示範/插拔/組裝/診斷）
+============================================================ */
+(function hardware(){
+  "use strict";
+  var SVGNS="http://www.w3.org/2000/svg";
+  var state={ power:"off", predMode:false,
+    installed:{cpu:true,ram:true,storage:true,gpu:true},
+    periph:{monitor:true,keyboard:true,mouse:true,speaker:true,printer:true} };
+  var lastError="";
+  var SHORT={cpu:"CPU",ram:"RAM",storage:"儲存體",gpu:"顯示卡",monitor:"螢幕",keyboard:"鍵盤",mouse:"滑鼠",speaker:"喇叭",printer:"印表機"};
+  function present(k){ return (k in state.installed)? state.installed[k] : state.periph[k]; }
+
+  var CORE=[
+    {k:"cpu",name:"CPU 中央處理器",fn:"運算與控制核心"},
+    {k:"ram",name:"記憶體 RAM",fn:"暫存執行中的資料"},
+    {k:"storage",name:"儲存體 SSD／硬碟",fn:"永久保存資料"},
+    {k:"gpu",name:"顯示卡 GPU",fn:"產生畫面"}
+  ];
+  var PERIPH=[
+    {k:"keyboard",name:"鍵盤",fn:"文字輸入",io:"in"},
+    {k:"mouse",name:"滑鼠",fn:"游標輸入",io:"in"},
+    {k:"monitor",name:"螢幕",fn:"畫面輸出",io:"out"},
+    {k:"speaker",name:"喇叭",fn:"聲音輸出",io:"out"},
+    {k:"printer",name:"印表機",fn:"列印輸出",io:"out"}
+  ];
+  var CAPS=[
+    {id:"post",name:"通電開機（POST）",need:["cpu","ram"]},
+    {id:"compute",name:"運算處理",need:["cpu"]},
+    {id:"run",name:"執行程式",need:["cpu","ram"]},
+    {id:"os",name:"載入作業系統",need:["cpu","ram","storage"]},
+    {id:"display",name:"螢幕顯示",need:["gpu","monitor"]},
+    {id:"keyin",name:"鍵盤輸入",need:["keyboard"]},
+    {id:"sound",name:"聲音輸出",need:["speaker"]},
+    {id:"print",name:"列印文件",need:["printer"]}
+  ];
+  function evalCaps(s){ var o={}; CAPS.forEach(function(c){ var miss=[]; c.need.forEach(function(k){ var has=(k in s.installed)?s.installed[k]:s.periph[k]; if(!has) miss.push(SHORT[k]); }); o[c.id]={ok:miss.length===0,missing:miss}; }); return o; }
+
+  var capsEl=$("caps");
+  function renderCaps(){ var c=evalCaps(state),h=""; CAPS.forEach(function(x){ var r=c[x.id]; h+='<div class="cap"><span class="st '+(r.ok?"ok":"no")+'">'+(r.ok?"OK":"✘")+'</span><span class="nm">'+x.name+'</span><span class="rs '+(r.ok?"":"bad")+'">'+(r.ok?"可用":("缺少："+r.missing.join("、")))+'</span></div>'; }); capsEl.innerHTML=h; }
+
+  function setLed(id,color){ var e=$(id); if(e) e.setAttribute("fill",color); }
+  function renderDevices(){
+    ["monitor","keyboard","mouse","speaker","printer"].forEach(function(k){ var g=$("dev-"+k); if(g) g.classList.toggle("unplugged", !state.periph[k]); });
+    ["cpu","ram","storage","gpu"].forEach(function(k){ var g=$("slot-"+k); if(g) g.classList.toggle("removed", !state.installed[k]); });
+    var on = state.power==="on";
+    setLed("led-tower", state.power==="on"||state.power==="halted"?"#34a36b":(state.power==="booting"||state.power==="shutting"?"#d9912f":"#46505a"));
+    ["monitor","keyboard","mouse","speaker","printer"].forEach(function(k){ setLed("led-"+k, (on && state.periph[k])? "#34a36b":"#46505a"); });
+    $("desk").classList.toggle("booting", state.power==="booting");
+    renderScreen();
+  }
+  function renderScreen(){
+    var bg=$("scr-bg"), dt=$("scr-desktop"), l1=$("scr-l1"), l2=$("scr-l2");
+    dt.style.display="none"; l1.textContent=""; l2.textContent="";
+    if(!state.periph.monitor){ bg.setAttribute("fill","#0a0f14"); return; }
+    if(state.power==="off"||state.power==="shutting"){ bg.setAttribute("fill","#0a0f14"); if(state.power==="shutting"){l2.setAttribute("fill","#f2c673");l2.textContent="關機中…";} return; }
+    if(state.power==="booting"){ bg.setAttribute("fill","#0a0f14"); l1.setAttribute("fill","#7fe6a6"); l1.textContent="● 開機中…"; return; }
+    if(state.power==="halted"){ bg.setAttribute("fill","#1a0d0d"); l1.setAttribute("fill","#ff8d83"); l1.textContent="✘ 開機失敗"; l2.setAttribute("fill","#f0b3ad"); l2.textContent=lastError.replace(/^✘\s*/,""); return; }
+    if(!state.installed.gpu){ bg.setAttribute("fill","#0a0f14"); l1.setAttribute("fill","#f2c673"); l1.textContent="無訊號 No Signal"; l2.setAttribute("fill","#bfa15a"); l2.textContent="（缺少顯示卡）"; return; }
+    bg.setAttribute("fill","#0a0f14"); dt.style.display="";
+  }
+  function renderControls(){
+    var b=$("powerBtn"), s=$("statusBadge"), d=$("demoBtn");
+    var map={off:["off","已關機"],booting:["booting","開機中…"],on:["on","運行中"],halted:["halted","開機失敗"],shutting:["shutting","關機中…"]};
+    s.className="status "+map[state.power][0]; s.textContent=map[state.power][1];
+    if(state.power==="off"||state.power==="halted"){ b.textContent="⏻ 開機"; b.classList.remove("on"); b.disabled=false; }
+    else if(state.power==="on"){ b.textContent="⏻ 關機"; b.classList.add("on"); b.disabled=false; }
+    else { b.textContent="…"; b.disabled=true; }
+    d.disabled = !(state.power==="on" && state.periph.keyboard && state.periph.monitor && state.installed.gpu);
+  }
+  function renderAll(){ renderCaps(); renderDevices(); renderControls(); renderCards(); }
+
+  var logEl=$("log");
+  function clearLog(){ logEl.innerHTML=""; }
+  function logLine(txt,cls){ var d=document.createElement("div"); d.className="logline "+(cls||"run"); d.textContent=txt; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; }
+
+  var runId=0;
+  function cancelSeq(){ runId++; }
+  function bootSequence(){
+    if(state.power!=="off" && state.power!=="halted") return;
+    cancelSeq(); var my=runId; lastError="";
+    state.power="booting"; clearLog(); $("logTitle").textContent="BOOT SEQUENCE · 開機程序"; $("cyc").classList.remove("show");
+    renderAll();
+    var steps=[
+      {msg:"① 按下電源鍵 — 電源供應器開始供電…",check:function(){return true;}},
+      {msg:"② CPU 執行開機韌體（BIOS/UEFI）…",check:function(){return state.installed.cpu;},fail:"✘ 未偵測到 CPU — 無法開機"},
+      {msg:"③ POST 自我測試：偵測記憶體 (RAM)…",check:function(){return state.installed.ram;},fail:"✘ 未偵測到記憶體 (RAM) — 開機中止（嗶聲）"},
+      {msg:"④ 偵測儲存體，載入作業系統到 RAM…",check:function(){return state.installed.storage;},fail:"✘ 找不到開機磁碟 — 無作業系統可載入"},
+      {msg:"⑤ 初始化輸入裝置（鍵盤、滑鼠）…",warn:function(){ if(!state.periph.keyboard&&!state.periph.mouse)return "⚠ 未連接鍵盤與滑鼠 — 無法輸入"; if(!state.periph.keyboard)return "⚠ 未連接鍵盤"; if(!state.periph.mouse)return "⚠ 未連接滑鼠"; return null;}},
+      {msg:"⑥ 顯示卡輸出畫面到螢幕…",warn:function(){ if(!state.installed.gpu)return "⚠ 缺少顯示卡 — 螢幕無訊號"; if(!state.periph.monitor)return "⚠ 未連接螢幕 — 看不到畫面"; return null;}},
+      {msg:"⑦ 系統就緒 ✔ 可以開始操作",ok:true}
+    ];
+    var i=0;
+    (function nextStep(){
+      if(my!==runId) return;
+      if(i>=steps.length){ state.power="on"; renderAll(); return; }
+      var s=steps[i++];
+      if(s.check && !s.check()){ logLine(s.msg,"run"); lastError=s.fail; logLine(s.fail,"fail"); logLine("→ 開機停止。請檢查並重新插上元件後再開機。","fail"); state.power="halted"; renderAll(); return; }
+      logLine(s.msg, s.ok?"ok":"run");
+      if(s.warn){ var w=s.warn(); if(w) logLine(w,"warn"); }
+      renderDevices();
+      setTimeout(nextStep, delay(820));
+    })();
+  }
+  function shutdownSequence(){
+    if(state.power!=="on") return;
+    cancelSeq(); var my=runId;
+    state.power="shutting"; clearLog(); $("logTitle").textContent="SHUTDOWN · 關機程序"; $("cyc").classList.remove("show");
+    renderControls(); renderScreen();
+    var steps=["① 儲存資料、把 RAM 內容寫回儲存體…","② 關閉應用程式、作業系統停止服務…","③ 卸載輸入／輸出裝置（裝置電源熄滅）…","④ 關閉螢幕顯示…","⑤ CPU 停止運作、切斷電源 ⏻"];
+    var i=0;
+    (function nextStep(){
+      if(my!==runId) return;
+      if(i>=steps.length){ state.power="off"; logLine("已關機。",""); renderAll(); return; }
+      logLine(steps[i], i===4?"ok":"run");
+      if(i===2){ ["led-keyboard","led-mouse","led-speaker","led-printer"].forEach(function(x){setLed(x,"#46505a");}); }
+      if(i===3){ setLed("led-monitor","#46505a"); }
+      i++; setTimeout(nextStep, delay(760));
+    })();
+  }
+  $("powerBtn").addEventListener("click", function(){
+    if(state.power==="off"||state.power==="halted") bootSequence();
+    else if(state.power==="on") shutdownSequence();
+  });
+
+  // operation demo
+  var cyc=$("cyc"), stages=[].slice.call(document.querySelectorAll("#cyc .stage"));
+  function flowDot(pathId,color,dur,cb){
+    var path=$(pathId); if(!path||REDUCE){ cb&&cb(); return; }
+    var len=path.getTotalLength(), dot=document.createElementNS(SVGNS,"circle");
+    dot.setAttribute("r","5"); dot.setAttribute("fill",color); dot.setAttribute("class","flowdot");
+    path.parentNode.appendChild(dot);
+    var start=null;
+    requestAnimationFrame(function f(ts){ if(!start)start=ts; var p=Math.min((ts-start)/dur,1); var pt=path.getPointAtLength(p*len); dot.setAttribute("cx",pt.x); dot.setAttribute("cy",pt.y); if(p<1)requestAnimationFrame(f); else{ dot.remove(); cb&&cb(); } });
+  }
+  $("demoBtn").addEventListener("click", function(){
+    if(state.power!=="on") return;
+    cancelSeq(); var my=runId;
+    $("logTitle").textContent="OPERATION · 運作流程"; clearLog(); cyc.classList.add("show");
+    stages.forEach(function(s){s.classList.remove("active");});
+    logLine("使用者按下鍵盤的『A』鍵 …","run");
+    flowDot("path-kb","#3a6ea5",900,function(){
+      if(my!==runId)return;
+      logLine("輸入訊號送入主機 → CPU 開始指令週期","run");
+      $("desk").classList.add("processing");
+      var i=0, flows=["控制單元到 RAM 擷取指令","解碼指令","ALU 執行運算","結果寫回暫存器/記憶體"];
+      (function step(){
+        if(my!==runId)return;
+        stages.forEach(function(s){s.classList.remove("active");});
+        if(i<4){ stages[i].classList.add("active"); logLine("　• "+flows[i],"run"); i++; setTimeout(step,delay(650)); }
+        else{
+          logLine("CPU 將結果送往輸出裝置 …","run");
+          flowDot("path-mon","#5a8f5a",900,function(){
+            if(my!==runId)return;
+            $("scr-desktop").style.display="none";
+            $("scr-l1").setAttribute("fill","#fff"); $("scr-l1").textContent="A";
+            logLine("✔ 螢幕顯示字元『A』","ok");
+            $("desk").classList.remove("processing");
+            if(state.periph.speaker){ pulseSpeaker(); logLine("✔ 喇叭發出提示音","ok"); }
+            setTimeout(function(){ if(my===runId){ stages.forEach(function(s){s.classList.remove("active");}); renderScreen(); } }, 1400);
+          });
+        }
+      })();
+    });
+  });
+  function pulseSpeaker(){ var c=$("spk-cone"); if(!c||REDUCE)return; var r=16,t=0; var iv=setInterval(function(){ t++; c.setAttribute("r", r+(t%2?5:0)); if(t>5){clearInterval(iv);c.setAttribute("r",r);} },120); }
+
+  // toggling + predict
+  function clone(s){ return {power:s.power,installed:Object.assign({},s.installed),periph:Object.assign({},s.periph)}; }
+  function setPart(k,val){ if(k in state.installed) state.installed[k]=val; else state.periph[k]=val; }
+  function toggle(k){
+    var installing=!present(k);
+    if(installing || !state.predMode){ setPart(k,installing); afterToggle(); return; }
+    var hypo=clone(state); if(k in hypo.installed) hypo.installed[k]=false; else hypo.periph[k]=false;
+    openPredict(SHORT[k], function(){ setPart(k,false); afterToggle(); });
+  }
+  function afterToggle(){
+    if(state.power==="on"){ var c=evalCaps(state); if(!c.post.ok){ state.power="halted"; lastError="✘ 運行中移除了關鍵元件，系統當機"; logLine(lastError,"fail"); } }
+    renderAll();
+  }
+  ["monitor","keyboard","mouse","speaker","printer"].forEach(function(k){
+    var g=$("dev-"+k); if(!g)return;
+    g.addEventListener("click", function(){ toggle(k); });
+    g.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle(k);} });
+  });
+  ["cpu","ram","storage","gpu"].forEach(function(k){
+    var g=$("slot-"+k); if(!g)return;
+    g.addEventListener("click", function(){ toggle(k); });
+    g.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle(k);} });
+  });
+  $("predMode").addEventListener("change", function(){ state.predMode=this.checked; });
+
+  function renderCards(){
+    var core=$("coreCards"); core.innerHTML="";
+    CORE.forEach(function(x){
+      var on=state.installed[x.k];
+      var div=document.createElement("div"); div.className="dc "+(on?"on":"off");
+      div.innerHTML='<span class="ic core">'+SHORT[x.k]+'</span><div class="meta"><b>'+x.name+'</b><span>'+x.fn+'</span></div><button class="tg">'+(on?"拔除":"插上")+'</button>';
+      div.querySelector(".tg").addEventListener("click", function(){ toggle(x.k); });
+      core.appendChild(div);
+    });
+    var pe=$("periphCards"); pe.innerHTML="";
+    PERIPH.forEach(function(x){
+      var on=state.periph[x.k];
+      var div=document.createElement("div"); div.className="dc "+(on?"on":"off");
+      div.innerHTML='<span class="ic '+x.io+'">'+(x.io==="in"?"IN":"OUT")+'</span><div class="meta"><b>'+x.name+'</b><span>'+x.fn+'</span></div><button class="tg">'+(on?"拔除":"插上")+'</button>';
+      div.querySelector(".tg").addEventListener("click", function(){ toggle(x.k); });
+      pe.appendChild(div);
+    });
+  }
+
+  // predict modal (shared by hardware predict mode)
+  var ov=$("ov"),mopts=$("mopts"),mDesc=$("mDesc"),verdict=$("verdict"),mVerify=$("mVerify"),mCancel=$("mCancel");
+  var pending=null;
+  function openPredict(lbl,apply){
+    pending={apply:apply}; mDesc.textContent="拔掉「"+lbl+"」後，你預測下列哪些功能會『失效』？（可複選，再按驗證）";
+    verdict.className="verdict"; verdict.innerHTML="";
+    var b=evalCaps(state),h="";
+    CAPS.forEach(function(c){ if(b[c.id].ok) h+='<label class="mopt"><input type="checkbox" value="'+c.id+'"> '+c.name+'</label>'; });
+    mopts.innerHTML=h||'<div style="font-size:13px;color:#5b6b7a">目前沒有可用功能可預測。</div>';
+    mVerify.textContent="驗證"; mVerify.dataset.stage="predict"; ov.classList.add("show");
+  }
+  function closePredict(){ ov.classList.remove("show"); pending=null; }
+  mCancel.addEventListener("click", closePredict);
+  mVerify.addEventListener("click", function(){
+    if(!pending) return;
+    if(mVerify.dataset.stage==="predict"){
+      var picked=[].slice.call(mopts.querySelectorAll("input:checked")).map(function(i){return i.value;});
+      // compute truth
+      var before=evalCaps(state);
+      var hypo=clone(state); var lbl; // re-derive which part: from desc not stored; recompute by applying
+      // apply hypothetically: we stored apply() which sets the part false; simulate on a copy
+      var copy=clone(state); pending.applyHypo(copy);
+      var after=evalCaps2(copy);
+      var truth=[]; CAPS.forEach(function(c){ if(before[c.id].ok && !after[c.id].ok) truth.push(c.id); });
+      var good=[],bad=[],missed=[];
+      picked.forEach(function(id){ (truth.indexOf(id)>=0?good:bad).push(capName(id)); });
+      truth.forEach(function(id){ if(picked.indexOf(id)<0) missed.push(capName(id)); });
+      var allRight = bad.length===0 && missed.length===0;
+      verdict.className="verdict show "+(allRight?"good":"part");
+      var html="<b>"+(allRight?"完全正確！":"部分正確")+"</b>";
+      if(good.length) html+='<div class="vline"><span class="g">✔ 答對失效：</span>'+good.join("、")+'</div>';
+      if(bad.length) html+='<div class="vline"><span class="b">✘ 其實仍可用：</span>'+bad.join("、")+'</div>';
+      if(missed.length) html+='<div class="vline"><span class="b">⚠ 漏掉：</span>'+missed.join("、")+'</div>';
+      verdict.innerHTML=html;
+      mVerify.textContent="套用拔除"; mVerify.dataset.stage="apply";
+    } else {
+      pending.apply(); closePredict();
+    }
+  });
+  function capName(id){ var f=CAPS.filter(function(c){return c.id===id;})[0]; return f?f.name:id; }
+  function evalCaps2(s){ return evalCaps(s); }
+  // store applyHypo when opening
+  var _open=openPredict;
+  openPredict=function(lbl,apply){
+    _open(lbl,apply);
+    pending.applyHypo=function(copy){ var key=Object.keys(SHORT).filter(function(k){return SHORT[k]===lbl;})[0]; if(key in copy.installed) copy.installed[key]=false; else copy.periph[key]=false; };
+  };
+
+  $("resetBtn").addEventListener("click", function(){
+    cancelSeq();
+    state={power:"off",predMode:state.predMode,installed:{cpu:true,ram:true,storage:true,gpu:true},periph:{monitor:true,keyboard:true,mouse:true,speaker:true,printer:true}};
+    clearLog(); logLine("已全部復原。按「開機」重新開始。","");
+    $("logTitle").textContent="POWER SEQUENCE"; $("cyc").classList.remove("show");
+    renderAll();
+  });
+
+  renderAll();
+
+  /* ---- 主機板插槽組裝 ---- */
+  (function build(){
+    var PARTNAME={cpu:"CPU",ram:"記憶體 RAM",storage:"儲存體 SSD",gpu:"顯示卡 GPU"};
+    var SLOTLAB={cpu:"CPU 插槽",ram:"RAM 插槽",storage:"儲存體插槽",gpu:"顯示卡插槽 (PCIe)"};
+    var PCOL={cpu:"#445466",ram:"#3f6d4f",storage:"#3a4a59",gpu:"#534257"};
+    var SLOTG={cpu:{x:40,y:50,w:150,h:96},ram:{x:210,y:50,w:206,h:34},storage:{x:210,y:96,w:206,h:48},gpu:{x:40,y:162,w:376,h:54}};
+    var PARTG={cpu:{x:466,y:52,w:224,h:58},ram:{x:466,y:118,w:224,h:40},storage:{x:466,y:166,w:224,h:46},gpu:{x:466,y:220,w:224,h:62}};
+    var bs={selected:null,slots:{cpu:null,ram:null,storage:null,gpu:null},tray:{cpu:true,ram:true,storage:true,gpu:true},bootOk:false};
+    var svg=$("buildSvg"); if(!svg) return;
+    function render(){
+      var s='';
+      s+='<rect x="14" y="14" width="420" height="332" rx="12" fill="#10312a"/>';
+      s+='<text x="28" y="36" fill="#e0b44a" font-family="monospace" font-size="12" font-weight="700">MAINBOARD · 主機板</text>';
+      s+='<rect x="450" y="14" width="256" height="332" rx="12" fill="#eef2f7" stroke="#dfe5ec"/>';
+      s+='<text x="464" y="36" fill="#2e5496" font-size="13" font-weight="700">零件盤</text>';
+      s+='<text x="464" y="336" fill="#8a97a4" font-size="11">點零件 → 點空插槽安裝</text>';
+      s+='<rect x="40" y="228" width="376" height="40" rx="6" fill="#2a323a" stroke="#1d2a35"/><text x="228" y="252" text-anchor="middle" fill="#aeb8c1" font-size="12">電源供應器（內建·固定）</text>';
+      Object.keys(SLOTG).forEach(function(id){
+        var g=SLOTG[id], f=bs.slots[id], correct=(f===id);
+        if(f){
+          s+='<g data-slot="'+id+'" style="cursor:pointer">';
+          s+='<rect x="'+g.x+'" y="'+g.y+'" width="'+g.w+'" height="'+g.h+'" rx="7" fill="'+PCOL[f]+'" stroke="'+(correct?"#34a36b":"#e2574c")+'" stroke-width="3"/>';
+          s+='<text x="'+(g.x+g.w/2)+'" y="'+(g.y+g.h/2-2)+'" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">'+PARTNAME[f]+'</text>';
+          s+='<text x="'+(g.x+g.w/2)+'" y="'+(g.y+g.h/2+16)+'" text-anchor="middle" fill="'+(correct?"#bff0d2":"#ffd2cd")+'" font-size="10.5">'+(correct?"✓ 正確":"✘ 裝錯（應為 "+PARTNAME[id]+"）")+'</text>';
+          s+='</g>';
+        } else {
+          s+='<g data-slot="'+id+'" style="cursor:pointer">';
+          s+='<rect x="'+g.x+'" y="'+g.y+'" width="'+g.w+'" height="'+g.h+'" rx="7" fill="rgba(255,255,255,.04)" stroke="#6b8e80" stroke-width="2" stroke-dasharray="6 5"/>';
+          s+='<text x="'+(g.x+g.w/2)+'" y="'+(g.y+g.h/2+4)+'" text-anchor="middle" fill="#9fc2b4" font-size="12">'+SLOTLAB[id]+'（空）</text>';
+          s+='</g>';
+        }
+      });
+      Object.keys(PARTG).forEach(function(id){
+        var g=PARTG[id], avail=bs.tray[id], sel=(bs.selected===id);
+        if(avail){
+          s+='<g data-part="'+id+'" style="cursor:pointer">';
+          s+='<rect x="'+g.x+'" y="'+g.y+'" width="'+g.w+'" height="'+g.h+'" rx="8" fill="'+PCOL[id]+'" stroke="'+(sel?"#e0b44a":"#1d2a35")+'" stroke-width="'+(sel?"3":"1")+'"/>';
+          s+='<text x="'+(g.x+14)+'" y="'+(g.y+g.h/2-2)+'" fill="#fff" font-size="13" font-weight="700">'+PARTNAME[id]+'</text>';
+          s+='<text x="'+(g.x+14)+'" y="'+(g.y+g.h/2+15)+'" fill="#cfe0ee" font-size="10">'+(sel?"已選取，請點插槽":"點選安裝")+'</text>';
+          s+='</g>';
+        } else {
+          s+='<rect x="'+g.x+'" y="'+g.y+'" width="'+g.w+'" height="'+g.h+'" rx="8" fill="#e6ebf0" stroke="#dfe5ec"/>';
+          s+='<text x="'+(g.x+g.w/2)+'" y="'+(g.y+g.h/2+4)+'" text-anchor="middle" fill="#9aa6b2" font-size="12">'+PARTNAME[id]+'（已安裝）</text>';
+        }
+      });
+      svg.innerHTML=s;
+      $("bSel").textContent="目前選取："+(bs.selected?PARTNAME[bs.selected]:"（無）");
+    }
+    svg.addEventListener("click", function(e){
+      var partG=e.target.closest("[data-part]"), slotG=e.target.closest("[data-slot]");
+      if(partG){ var pid=partG.getAttribute("data-part"); bs.selected=(bs.selected===pid?null:pid); render(); return; }
+      if(slotG){
+        var sid=slotG.getAttribute("data-slot");
+        if(bs.slots[sid]){ bs.tray[bs.slots[sid]]=true; bs.slots[sid]=null; render(); return; }
+        if(bs.selected){ bs.slots[sid]=bs.selected; bs.tray[bs.selected]=false; bs.selected=null; render(); }
+      }
+    });
+    function coreOk(){ return bs.slots.cpu==="cpu" && bs.slots.ram==="ram" && bs.slots.storage==="storage"; }
+    $("bExec").addEventListener("click", function(){
+      $("bScore").disabled=false;
+      var out=$("bOut"); out.style.display="block";
+      if(coreOk()){ bs.bootOk=true; var disp=(bs.slots.gpu==="gpu"); out.className="runout ok"; out.textContent="✔ 開機成功，系統就緒"+(disp?"，畫面正常輸出。":"（缺顯示卡，螢幕可能無訊號）。"); }
+      else { bs.bootOk=false; out.className="runout no"; var miss=[]; ["cpu","ram","storage"].forEach(function(k){ if(bs.slots[k]!==k) miss.push(PARTNAME[k]); }); out.textContent="✘ 開機失敗：核心元件未正確安裝（"+miss.join("、")+"）。"; }
+      render();
+    });
+    $("bScore").addEventListener("click", function(){
+      var pts=[],total=0,notes=[];
+      function add(l,g,m){pts.push({l:l,g:g,m:m});total+=g;}
+      add("CPU 裝對插槽", bs.slots.cpu==="cpu"?25:0,25);
+      add("RAM 裝對插槽", bs.slots.ram==="ram"?25:0,25);
+      add("儲存體 裝對插槽", bs.slots.storage==="storage"?25:0,25);
+      add("顯示卡 裝對插槽", bs.slots.gpu==="gpu"?15:0,15);
+      add("成功執行開機", bs.bootOk?10:0,10);
+      Object.keys(bs.slots).forEach(function(id){
+        var f=bs.slots[id];
+        if(!f){ notes.push("「"+SLOTLAB[id]+"」是空的 — 請安裝 "+PARTNAME[id]+(id==="gpu"?"（可選配，缺它無法輸出畫面）":"")+"。"); }
+        else if(f!==id){ notes.push("「"+SLOTLAB[id]+"」裝了 "+PARTNAME[f]+"，應改為 "+PARTNAME[id]+"。"); }
+      });
+      total=Math.max(0,Math.min(100,total));
+      $("bScoreNum").textContent=total; $("bScoreBar").style.width=total+"%";
+      var grade=total>=90?"優秀":(total>=75?"良好":(total>=60?"及格":"待加強"));
+      $("bScoreGrade").textContent=grade;
+      var li=""; pts.forEach(function(p){ li+='<li><span class="m">'+p.g+"/"+p.m+'</span>'+p.l+'</li>'; });
+      $("bScoreList").innerHTML=li;
+      $("bScoreSug").innerHTML="<b>評分建議（"+grade+"）：</b>"+(notes.length?(" 需修正——"+notes.join(" ")):" 全部零件都裝對插槽、開機成功，完美！");
+      $("bScoreWrap").classList.add("show");
+    });
+    $("bReset").addEventListener("click", function(){
+      bs={selected:null,slots:{cpu:null,ram:null,storage:null,gpu:null},tray:{cpu:true,ram:true,storage:true,gpu:true},bootOk:false};
+      $("bScore").disabled=true; $("bScoreWrap").classList.remove("show");
+      $("bOut").style.display="none"; render();
+    });
+    render();
+  })();
+})();
+
+/* ============================================================
+   3) 共用：互動故障診斷引擎（hw / sw / nw 共用）
+============================================================ */
+function makeTrouble(mountId, bank){
+  var mount=$(mountId); if(!mount) return;
+  var cur=null, answered=false;
+  function newCase(){
+    answered=false;
+    cur=bank[Math.floor(Math.random()*bank.length)];
+    var opts=cur.options.map(function(o,i){
+      return '<label class="opt" data-i="'+i+'"><input type="radio" name="'+mountId+'q"> '+o+'</label>';
+    }).join("");
+    mount.innerHTML=
+      '<div class="diag-live bad"><div class="dic">!</div><div class="d"><b>徵狀</b><span>'+cur.symptom+'</span></div></div>'+
+      '<p class="lead" style="margin:0 0 8px">最可能的原因是？</p>'+
+      '<div class="opts" id="'+mountId+'-opts">'+opts+'</div>'+
+      '<div class="explain" id="'+mountId+'-exp"></div>'+
+      '<div class="arow"><button class="btn primary" id="'+mountId+'-v" disabled>驗證</button><button class="btn" id="'+mountId+'-n">換一題</button></div>';
+    var optWrap=$(mountId+"-opts"), vb=$(mountId+"-v");
+    optWrap.addEventListener("change", function(){ vb.disabled=false; });
+    vb.addEventListener("click", function(){
+      if(answered) return; answered=true;
+      var picked=optWrap.querySelector("input:checked").closest(".opt");
+      var pi=parseInt(picked.getAttribute("data-i"),10);
+      [].slice.call(optWrap.querySelectorAll(".opt")).forEach(function(o,i){
+        o.classList.add("disabled");
+        if(i===cur.answer) o.classList.add("correct");
+        else if(i===pi) o.classList.add("wrong");
+      });
+      var exp=$(mountId+"-exp"); exp.classList.add("show");
+      exp.innerHTML=(pi===cur.answer?"<b>✔ 答對了。</b> ":"<b>✘ 再想想。</b> 正確原因：<b>"+cur.options[cur.answer]+"</b>。")+cur.explain;
+    });
+    $(mountId+"-n").addEventListener("click", newCase);
+  }
+  newCase();
+}
+
+(function troubleshooting(){
+  makeTrouble("hwTrouble", [
+    {symptom:"按下電源後完全沒反應、燈號也不亮。", options:["未供電（電源線／電源供應器）","作業系統損毀","DNS 設定錯誤","顯示卡驅動過舊"], answer:0, explain:" 連電都沒有，問題在最底層的供電，與軟體、網路無關。"},
+    {symptom:"風扇有轉、電源燈亮，但螢幕全黑、開機時發出嗶聲。", options:["印表機沒接","記憶體 RAM 未插好","網路線沒插","喇叭壞了"], answer:1, explain:" POST 嗶聲常代表 RAM 偵測失敗，重新插拔記憶體多半能解決。"},
+    {symptom:"主機正常運轉，但螢幕顯示「無訊號 No Signal」。", options:["缺顯示卡或螢幕線沒接","CPU 沒裝","RAM 不足","DNS 故障"], answer:0, explain:" 主機有跑代表核心元件正常，問題在畫面輸出這一段：顯示卡或螢幕連接線。"},
+    {symptom:"開機跑到一半顯示「找不到開機磁碟」。", options:["鍵盤沒接","儲存體未連接或沒有作業系統","喇叭沒電","閘道設錯"], answer:1, explain:" 開機磁碟在儲存體上，找不到代表 SSD／硬碟沒接好或上面沒有 OS。"}
+  ]);
+  makeTrouble("swTrouble", [
+    {symptom:"開機後一直卡在廠商標誌畫面，進不了桌面。", options:["螢幕線鬆了","作業系統損毀","網路卡停用","RAM 拔掉了"], answer:1, explain:" 硬體能亮標誌代表開機到一半，卡住通常是作業系統檔案毀損，需修復或重灌。"},
+    {symptom:"新的印表機接上電腦了，卻怎麼都印不出來。", options:["缺少印表機驅動程式","CPU 過熱","IP 位址錯誤","螢幕解析度太低"], answer:0, explain:" 作業系統要靠驅動程式才認得特定硬體，少了驅動，裝置接了也不會動。"},
+    {symptom:"某個應用程式一打開就立刻閃退。", options:["數據機斷線","程式毀損或版本不相容","顯示卡沒裝","鍵盤沒接"], answer:1, explain:" 單一程式閃退多半是該程式本身的問題，重裝或更新版本通常可解。"},
+    {symptom:"電腦突然變超慢，還一直跳出可疑廣告視窗。", options:["惡意程式／病毒","螢幕太亮","子網路遮罩錯誤","喇叭音量太大"], answer:0, explain:" 異常變慢加可疑彈窗是典型的惡意程式徵兆，應用防毒公用程式掃描清除。"}
+  ]);
+  makeTrouble("nwTrouble", [
+    {symptom:"電腦右下角完全沒有任何網路圖示。", options:["網路卡停用或未安裝","印表機沒接","RAM 不足","OS 需要更新"], answer:0, explain:" 連網路介面都沒有，代表最底層的網路卡（NIC）沒啟用或沒裝。"},
+    {symptom:"可以連到同網段的印表機，卻完全無法上網。", options:["螢幕沒訊號","預設閘道錯誤或路由器斷線","鍵盤沒接","CPU 沒裝"], answer:1, explain:" 區網內通、外網不通，問題在『出口』——預設閘道設錯或對外線路斷了。"},
+    {symptom:"用 IP 位址可以 ping 通伺服器，但用網址就打不開網站。", options:["DNS 沒設定或故障","硬碟壞了","顯示卡驅動過舊","電源不足"], answer:0, explain:" IP 通、網域不通，差別在『把網址翻成 IP』這步，也就是 DNS 出問題。"},
+    {symptom:"IP 位址顯示成 0.0.0.0，網路完全不通。", options:["沒拿到 IP（DHCP 失敗）","喇叭沒電","程式版本太舊","螢幕線鬆了"], answer:0, explain:" 0.0.0.0 代表電腦根本沒取得有效門牌，需重新取得 IP 或檢查路由器。"}
+  ]);
+})();
+
+/* ============================================================
+   4) 軟體安裝佇列 + 縱向運作
+============================================================ */
+(function software(){
+  var LAYERS=[
+    {k:"os",name:"作業系統 OS",hint:"系統總管，所有軟體的地基",dep:null},
+    {k:"drv",name:"裝置驅動程式",hint:"讓 OS 認得硬體",dep:"os"},
+    {k:"util",name:"公用程式（防毒等）",hint:"維護與保護系統",dep:"drv"},
+    {k:"app",name:"應用程式",hint:"使用者真正在用的軟體",dep:"util"}
+  ];
+  var installed={os:false,drv:false,util:false,app:false};
+  var mount=$("swStack");
+  function render(){
+    mount.innerHTML="";
+    // 韌體底座（內建）
+    var fw=document.createElement("div"); fw.className="swlayer done";
+    fw.innerHTML='<span class="si">FW</span><div class="sm"><b>韌體 BIOS / UEFI</b><span>內建於主機板，開機最先執行</span></div><span class="stt">內建</span>';
+    mount.appendChild(fw);
+    LAYERS.forEach(function(l){
+      var done=installed[l.k];
+      var div=document.createElement("div"); div.className="swlayer "+(done?"done":"");
+      div.innerHTML='<span class="si">'+l.k.toUpperCase()+'</span><div class="sm"><b>'+l.name+'</b><span>'+l.hint+'</span></div>'+
+        (done?'<span class="stt">✔ 已安裝</span>':'<button class="btn sw stt-btn" data-k="'+l.k+'" style="padding:6px 12px">安裝</button>');
+      mount.appendChild(div);
+    });
+    [].slice.call(mount.querySelectorAll(".stt-btn")).forEach(function(b){
+      b.addEventListener("click", function(){ install(b.getAttribute("data-k")); });
+    });
+  }
+  function install(k){
+    var l=LAYERS.filter(function(x){return x.k===k;})[0];
+    var out=$("swOut"); out.style.display="block";
+    if(l.dep && !installed[l.dep]){
+      var depName=LAYERS.filter(function(x){return x.k===l.dep;})[0].name;
+      out.className="runout no"; out.textContent="✘ 安裝失敗：請先安裝下層的「"+depName+"」。軟體必須由底層往上裝。";
+      return;
+    }
+    installed[k]=true; out.className="runout ok"; out.textContent="✔ 已安裝「"+l.name+"」。"; render();
+  }
+  $("swBoot").addEventListener("click", function(){
+    var out=$("swOut"); out.style.display="block";
+    if(!installed.os){ out.className="runout no"; out.textContent="✘ 啟動失敗：沒有作業系統，開機後無事可做。請先安裝 OS。"; return; }
+    var msg="✔ 系統可開機。";
+    if(!installed.drv) msg+=" ⚠ 缺驅動程式：部分裝置（印表機、顯示卡）可能無法正常運作。";
+    if(!installed.util) msg+=" ⚠ 缺公用程式：系統較無防護。";
+    if(!installed.app) msg+=" ⚠ 尚未安裝應用程式：可開機但沒有工具可用。";
+    if(installed.drv&&installed.util&&installed.app) msg="✔ 完整安裝，系統就緒：裝置正常、有防護、應用可用。";
+    out.className="runout "+((installed.drv&&installed.app)?"ok":"no"); out.textContent=msg;
+  });
+  $("swReset").addEventListener("click", function(){ installed={os:false,drv:false,util:false,app:false}; $("swOut").style.display="none"; render(); });
+  render();
+
+  // 縱向運作
+  var flowLayers=[].slice.call(document.querySelectorAll("#swFlow .layer"));
+  var running=false;
+  $("swRun").addEventListener("click", function(){
+    if(running) return;
+    if(!installed.os || !installed.drv){ var st=$("swRunStatus"); st.style.color="var(--fail)"; st.textContent="✘ 請先在左側安裝 OS 與驅動程式"; return; }
+    running=true; this.disabled=true;
+    flowLayers.forEach(function(l){ l.classList.remove("lit"); });
+    var msgs=["應用程式發出『顯示相片』指令…","作業系統找到檔案、配置記憶體…","顯示卡驅動翻譯成 GPU 指令…","GPU 與螢幕把相片畫出來 ✔"], i=0, st=$("swRunStatus");
+    (function step(){
+      flowLayers.forEach(function(l){ l.classList.remove("lit"); });
+      if(i>=msgs.length){ st.style.color="var(--ok)"; st.textContent="✔ 相片顯示完成"; running=false; $("swRun").disabled=false; return; }
+      flowLayers[i].classList.add("lit"); st.style.color="var(--muted)"; st.textContent=msgs[i]; i++; setTimeout(step,delay(820));
+    })();
+  });
+})();
+
+/* ============================================================
+   5) 網路設定 + ping 測試 + 封包流向
+============================================================ */
+(function network(){
+  var form=$("netForm");
+  function readCfg(){ var c={}; [].slice.call(form.querySelectorAll("select")).forEach(function(s){ c[s.getAttribute("data-key")]=s.value; }); return c; }
+  function markBad(keys){ [].slice.call(form.querySelectorAll("select")).forEach(function(s){ s.classList.toggle("bad", keys.indexOf(s.getAttribute("data-key"))>=0); }); }
+
+  function diagnose(c){
+    // returns {stage, ok, msg, badkeys}
+    if(c.nic==="bad") return {stage:0, msg:"✘ 找不到網路介面：網路卡未啟用／未安裝。", bad:["nic"]};
+    if(c.router==="bad") return {stage:0, msg:"✘ 對外線路中斷：路由器／數據機未連上 ISP。", bad:["router"]};
+    if(c.ip==="bad") return {stage:1, msg:"✘ 未取得 IP（0.0.0.0）：電腦沒有有效門牌，無法通訊。", bad:["ip"]};
+    if(c.mask==="bad") return {stage:1, msg:"⚠ 子網路遮罩錯誤：區網／外網判斷會出錯。", bad:["mask"]};
+    if(c.gw==="bad") return {stage:2, msg:"✘ 閘道錯誤：可連區網，但封包出不去，無法上網。", bad:["gw"]};
+    if(c.dns==="bad") return {stage:3, msg:"✘ DNS 未設定：IP 可通，但網址無法解析、打不開網站。", bad:["dns"]};
+    return {stage:4, msg:"✔ 連線成功：可正常開啟網站。", bad:[]};
+  }
+  $("netTest").addEventListener("click", function(){
+    var c=readCfg(), d=diagnose(c); markBad(d.bad);
+    var out=$("pingOut");
+    var lines=[];
+    lines.push("$ ping www.example.com");
+    lines.push(c.nic==="bad" ? "→ 無網路介面可用" :
+      (c.ip==="bad" ? "→ 本機 IP：0.0.0.0（無效）" : "→ 本機 IP：192.168.1.20"));
+    if(d.stage>=2 && c.gw!=="bad" && c.nic!=="bad" && c.router!=="bad" && c.ip!=="bad") lines.push("→ 經由閘道 192.168.1.1 送出…");
+    if(d.stage>=4) { lines.push("→ DNS 解析 example.com = 93.184.216.34"); lines.push("→ 回應時間 24ms　TTL=56"); }
+    lines.push(""); lines.push(d.msg);
+    out.textContent=lines.join("\n");
+    netReady = (d.stage===4);
+  });
+  $("netFix").addEventListener("click", function(){
+    [].slice.call(form.querySelectorAll("select")).forEach(function(s){ s.value="ok"; s.classList.remove("bad"); });
+    $("pingOut").textContent="已套用正確設定，請按「連線測試」驗證。";
+  });
+  $("netRandom").addEventListener("click", function(){
+    var keys=["nic","ip","mask","gw","dns","router"];
+    [].slice.call(form.querySelectorAll("select")).forEach(function(s){ s.value="ok"; s.classList.remove("bad"); });
+    var n=1+Math.floor(Math.random()*2);
+    var shuffled=keys.slice().sort(function(){return Math.random()-0.5;}).slice(0,n);
+    shuffled.forEach(function(k){ form.querySelector('select[data-key="'+k+'"]').value="bad"; });
+    $("pingOut").textContent="已隨機設下 "+n+" 個錯誤。先想哪裡會斷，再按「連線測試」驗證。";
+  });
+
+  // 封包流向 svg
+  var svg=$("netSvg"); var netReady=false;
+  var NODES=[
+    {id:"pc",x:70,label:"你的電腦",sub:"瀏覽器"},
+    {id:"router",x:240,label:"路由器",sub:"預設閘道"},
+    {id:"dns",x:410,label:"DNS",sub:"解析網域"},
+    {id:"server",x:580,label:"伺服器",sub:"目標網站"}
+  ];
+  function drawNet(active){
+    var s='';
+    // links
+    for(var i=0;i<NODES.length-1;i++){ s+='<line x1="'+(NODES[i].x+60)+'" y1="120" x2="'+NODES[i+1].x+'" y2="120" stroke="#c2cad3" stroke-width="3"/>'; }
+    NODES.forEach(function(n,idx){
+      var on=(active!=null && idx<=active);
+      s+='<rect x="'+n.x+'" y="92" width="60" height="56" rx="9" fill="'+(on?"#138a8a":"#eef2f7")+'" stroke="'+(on?"#0e6868":"#dfe5ec")+'" stroke-width="2"/>';
+      s+='<text x="'+(n.x+30)+'" y="118" text-anchor="middle" fill="'+(on?"#fff":"#5b6b7a")+'" font-size="11" font-weight="700">'+n.label+'</text>';
+      s+='<text x="'+(n.x+30)+'" y="134" text-anchor="middle" fill="'+(on?"#cfeaea":"#9aa6b2")+'" font-size="9">'+n.sub+'</text>';
+    });
+    s+='<text x="360" y="200" text-anchor="middle" fill="#8a97a4" font-size="11" font-family="monospace">封包：你的電腦 → 路由器 → DNS解析 → 伺服器 → 回傳網頁</text>';
+    svg.innerHTML=s;
+  }
+  drawNet(null);
+  var running=false;
+  $("netFlow").addEventListener("click", function(){
+    if(running) return;
+    var st=$("netFlowStatus");
+    if(!netReady){ st.style.color="var(--fail)"; st.textContent="✘ 請先在左側『連線測試』成功，再模擬請求"; return; }
+    running=true; this.disabled=true;
+    var msgs=["瀏覽器送出網頁請求…","封包經由路由器（閘道）出去…","DNS 把網址翻成 IP 位址…","抵達目標伺服器、取得網頁回傳 ✔"], i=0;
+    (function step(){
+      if(i>=msgs.length){ st.style.color="var(--ok)"; st.textContent="✔ 網頁載入完成"; drawNet(null); running=false; $("netFlow").disabled=false; return; }
+      drawNet(i); st.style.color="var(--muted)"; st.textContent=msgs[i]; i++; setTimeout(step,delay(850));
+    })();
+  });
+})();
+
+/* ============================================================
+   6) 即時評量系統（先思考後驗證）
+============================================================ */
+(function assessment(){
+  /* cat: hw/sw/nw ; ct: de拆解 pa模式 ab抽象 al演算 ; lv: 1基礎 2進階 */
+  var BANK=[
+    {cat:"hw",ct:"de",lv:1,stem:"開機 POST 自我測試若偵測不到、會發出嗶聲中止的是哪個元件？",opts:["印表機","記憶體 RAM","喇叭","網路卡"],ans:1,exp:"RAM 是開機必需的核心元件，偵測失敗會以嗶聲示警並中止開機。"},
+    {cat:"hw",ct:"ab",lv:1,stem:"關機前要先把 RAM 內容寫回儲存體，原因是？",opts:["RAM 斷電就清空","RAM 比硬碟慢","硬碟會發熱","CPU 需要休息"],ans:0,exp:"RAM 是揮發性記憶體，斷電即清空，所以資料要先存回永久性的儲存體。"},
+    {cat:"hw",ct:"de",lv:2,stem:"主機運轉正常，螢幕卻顯示「無訊號」，最可能缺少？",opts:["作業系統","顯示卡或螢幕線","DNS","防毒軟體"],ans:1,exp:"主機有運轉代表核心元件正常，問題出在畫面輸出：顯示卡或螢幕連接。"},
+    {cat:"hw",ct:"ab",lv:1,stem:"下列何者屬於『輸入』裝置？",opts:["螢幕","喇叭","鍵盤","印表機"],ans:2,exp:"鍵盤把資料送進電腦屬輸入；螢幕、喇叭、印表機都是輸出裝置。"},
+    {cat:"hw",ct:"al",lv:2,stem:"CPU 處理一道指令的週期順序是？",opts:["執行→解碼→提取","提取→解碼→執行","解碼→提取→執行","提取→執行→解碼"],ans:1,exp:"指令週期為 提取(Fetch)→解碼(Decode)→執行(Execute)，循環進行。"},
+    {cat:"hw",ct:"al",lv:2,stem:"二進位 1011 換成十進位是多少？",opts:["9","11","13","15"],ans:1,exp:"1×8 + 0×4 + 1×2 + 1×1 = 11。"},
+    {cat:"hw",ct:"ab",lv:1,stem:"1 Byte（位元組）等於幾個 bit（位元）？",opts:["2","4","8","16"],ans:2,exp:"1 Byte = 8 bit，是資料量的基本單位。"},
+    {cat:"sw",ct:"al",lv:2,stem:"電腦開機時，下列軟體最先執行的是？",opts:["應用程式","作業系統","韌體 BIOS/UEFI","防毒軟體"],ans:2,exp:"韌體內建於主機板，是開機時最先執行、負責喚醒硬體的軟體。"},
+    {cat:"sw",ct:"de",lv:1,stem:"新印表機接上卻印不出來，最可能缺少？",opts:["IP 位址","驅動程式","顯示卡","子網路遮罩"],ans:1,exp:"作業系統要靠驅動程式才認得特定硬體，缺驅動裝置就不會運作。"},
+    {cat:"sw",ct:"al",lv:2,stem:"軟體分層由低到高，正確順序是？",opts:["應用→OS→韌體","韌體→OS→驅動→應用","OS→韌體→應用","驅動→應用→OS"],ans:1,exp:"由底層往上：韌體 → 作業系統 → 驅動程式 → 應用程式，每層依賴下層。"},
+    {cat:"sw",ct:"ab",lv:1,stem:"作業系統最主要的角色是？",opts:["畫圖","管理硬體與所有程式","上網","發電"],ans:1,exp:"OS 是『總管』，負責管理硬體、檔案、記憶體與所有程式的運作。"},
+    {cat:"sw",ct:"ab",lv:1,stem:"在 IPO 模型中，鍵盤 input() 取得的資料屬於哪一段？",opts:["Input 輸入","Process 處理","Output 輸出","Storage 儲存"],ans:0,exp:"IPO ＝ 輸入 → 處理 → 輸出；input() 取得資料屬於 Input 階段。"},
+    {cat:"sw",ct:"al",lv:1,stem:"要重複印出 1 到 5，最適合用哪種程式結構？",opts:["條件判斷 if","迴圈 loop","函式 def","匯入 import"],ans:1,exp:"重複性的工作用迴圈最合適，例如 for 由 1 跑到 5。"},
+    {cat:"sw",ct:"ab",lv:2,stem:"把重複出現的程式碼包成一個函式，主要對應運算思維的哪一項？",opts:["拆解","模式辨識","抽象化","除錯"],ans:2,exp:"把細節封裝、只保留可重用的介面，就是抽象化。"},
+    {cat:"nw",ct:"ab",lv:1,stem:"把網址（如 google.com）翻譯成 IP 位址的是？",opts:["DNS","CPU","RAM","印表機"],ans:0,exp:"DNS 像網路電話簿，把人看得懂的網域名稱解析成 IP 位址。"},
+    {cat:"nw",ct:"de",lv:2,stem:"可以連區網印表機卻不能上網，最可能問題在？",opts:["螢幕","預設閘道／路由器","鍵盤","喇叭"],ans:1,exp:"區網通、外網不通，代表『出口』有問題——預設閘道或對外線路。"},
+    {cat:"nw",ct:"ab",lv:1,stem:"IP 位址在網路中的角色相當於？",opts:["電源","門牌位址","螢幕","風扇"],ans:1,exp:"IP 位址是電腦在網路上的門牌，讓資料知道要送到哪一台。"},
+    {cat:"nw",ct:"de",lv:2,stem:"用 IP 能 ping 通、但網址打不開，最可能是？",opts:["硬碟壞","DNS 故障","CPU 過熱","螢幕沒電"],ans:1,exp:"IP 通、網域不通，差別就在解析這一步，也就是 DNS 出了問題。"},
+    {cat:"nw",ct:"ab",lv:2,stem:"物聯網常用的 MQTT，採用的通訊模型是？",opts:["發布／訂閱 (Pub/Sub)","主從輪詢","廣播風暴","單向廣播"],ans:0,exp:"MQTT 以 發布(Publish)／訂閱(Subscribe) 模型透過 Broker 轉送訊息，適合即時、低頻寬的物聯網傳輸。"},
+    {cat:"nw",ct:"pa",lv:1,stem:"感測器資料上雲常用的輕量文字交換格式是？",opts:["JSON","MP4","EXE","ZIP"],ans:0,exp:"JSON 結構清楚、輕量易讀，常用於感測資料與 API 之間的資料交換。"},
+    {cat:"nw",ct:"de",lv:1,stem:"物聯網三層架構中，溫溼度感測器屬於哪一層？",opts:["感知層","網路層","應用層","電源層"],ans:0,exp:"感測器負責蒐集環境資料，屬於最底層的感知層。"},
+    {cat:"nw",ct:"ab",lv:1,stem:"4G／5G 行動網路主要提供的能力是？",opts:["行動裝置的無線即時連網與傳輸","讓電腦變快","儲存檔案","產生電力"],ans:0,exp:"行動網路讓裝置不需固定線路也能即時上網與傳資料，是物聯網行動傳輸的基礎。"}
+  ];
+  var CATNAME={hw:"硬體",sw:"軟體",nw:"網路"};
+  var CTNAME={de:"拆解",pa:"模式",ab:"抽象",al:"演算"};
+  var CTFULL={de:"問題拆解",pa:"模式辨識",ab:"抽象化",al:"演算法思維"};
+  var LVNAME={1:"基礎",2:"進階"};
+  window.CC_BANK=BANK; window.CC_CAT=CATNAME; window.CC_CT=CTNAME; window.CC_CTF=CTFULL; window.CC_LV=LVNAME;
+  var quiz=[], idx=0, score=0, locked=false;
+  var catStat, ctStat, calib, history;
+
+  function reset(){
+    idx=0; score=0; locked=false;
+    catStat={hw:{c:0,t:0},sw:{c:0,t:0},nw:{c:0,t:0}};
+    ctStat={de:{c:0,t:0},pa:{c:0,t:0},ab:{c:0,t:0},al:{c:0,t:0}};
+    calib={gs:0,gw:0,bs:0,bw:0}; // good-sure / good-weak / bad-sure / bad-weak
+    history=[];
+  }
+  function start(){
+    var cat=document.querySelector('input[name="qcat"]:checked').value;
+    var lvSel=document.querySelector('input[name="qlevel"]:checked').value;
+    var cnt=parseInt($("qCount").value,10);
+    var pool=BANK.filter(function(q){
+      return (cat==="all"||q.cat===cat) && (lvSel==="all"||String(q.lv)===lvSel);
+    }).slice();
+    pool.sort(function(){return Math.random()-0.5;});
+    if(cnt>0) pool=pool.slice(0,Math.min(pool.length,cnt));
+    quiz=pool; reset();
+    $("quizArea").style.display="block"; $("quizResult").style.display="none";
+    renderQ();
+  }
+  function updateVerify(){
+    var o=$("qOpts").querySelector("input:checked");
+    var c=$("qConfWrap").querySelector("input:checked");
+    $("qVerify").disabled=!(o&&c);
+  }
+  function renderQ(){
+    locked=false;
+    var q=quiz[idx];
+    $("qProg").style.width=Math.round(idx/quiz.length*100)+"%";
+    $("qIdx").textContent="第 "+(idx+1)+" / "+quiz.length+" 題";
+    var badge=$("qCatBadge"); badge.className="qcat "+q.cat; badge.textContent=CATNAME[q.cat];
+    $("qCTBadge").textContent="CT·"+CTNAME[q.ct];
+    $("qLvBadge").textContent=LVNAME[q.lv];
+    $("qScoreNow").textContent="目前 "+score+" 分";
+    $("qStem").textContent=q.stem;
+    $("qOpts").innerHTML=q.opts.map(function(o,i){ return '<label class="opt" data-i="'+i+'"><input type="radio" name="quizopt"> '+o+'</label>'; }).join("");
+    [].slice.call($("qConfWrap").querySelectorAll('input')).forEach(function(r){ r.checked=false; });
+    $("qConfWrap").classList.add("show");
+    $("qExplain").className="explain"; $("qExplain").innerHTML="";
+    $("qVerify").style.display=""; $("qVerify").disabled=true; $("qNext").style.display="none";
+  }
+  $("qOpts").addEventListener("change", updateVerify);
+  $("qConfWrap").addEventListener("change", updateVerify);
+
+  $("qVerify").addEventListener("click", function(){
+    if(locked) return; locked=true;
+    var q=quiz[idx];
+    var pi=parseInt($("qOpts").querySelector("input:checked").closest(".opt").getAttribute("data-i"),10);
+    var conf=parseInt($("qConfWrap").querySelector("input:checked").value,10);
+    [].slice.call($("qOpts").querySelectorAll(".opt")).forEach(function(o,i){
+      o.classList.add("disabled");
+      if(i===q.ans) o.classList.add("correct"); else if(i===pi) o.classList.add("wrong");
+    });
+    var right=(pi===q.ans);
+    catStat[q.cat].t++; ctStat[q.ct].t++;
+    if(right){ score+=Math.round(100/quiz.length); catStat[q.cat].c++; ctStat[q.ct].c++; }
+    if(right){ if(conf===3) calib.gs++; else calib.gw++; } else { if(conf===3) calib.bs++; else calib.bw++; }
+    history.push({n:idx+1,cat:q.cat,ct:q.ct,lv:q.lv,stem:q.stem,pick:q.opts[pi],correct:q.opts[q.ans],right:right,conf:conf});
+    $("qScoreNow").textContent="目前 "+score+" 分";
+    var cnote = right
+      ? (conf===3?"觀念扎實，繼續保持。":(conf===1?"用猜的卻答對，建議回模組再複習鞏固。":"答對，持續累積。"))
+      : (conf===3?"很有把握卻答錯——可能是迷思概念，需要特別澄清。":(conf===1?"不確定且答錯，屬尚未學會，回該主軸重做模擬。":"答錯，請對照解析修正。"));
+    var exp=$("qExplain"); exp.classList.add("show");
+    exp.innerHTML=(right?"<b>✔ 答對！</b> ":"<b>✘ 答錯。</b> 正解：<b>"+q.opts[q.ans]+"</b>。")+q.exp+'<div style="margin-top:6px;color:var(--warn)"><b>把握度回饋：</b>'+cnote+'</div>';
+    $("qConfWrap").classList.remove("show");
+    $("qVerify").style.display="none";
+    $("qNext").style.display=""; $("qNext").textContent=(idx<quiz.length-1?"下一題 →":"看成績 →");
+  });
+  $("qNext").addEventListener("click", function(){ if(idx<quiz.length-1){ idx++; renderQ(); } else finish(); });
+
+  function bars(map,names,clsPrefix){
+    var h=""; Object.keys(map).forEach(function(k){
+      var s=map[k]; if(s.t===0) return; var pct=Math.round(s.c/s.t*100);
+      h+='<div class="catbar '+clsPrefix+k+'"><span class="cl">'+names[k]+'</span><span class="ct"><i style="width:'+pct+'%"></i></span><span class="cn">'+s.c+"/"+s.t+'</span></div>';
+    });
+    return h||'<div style="color:var(--muted);font-size:13px">本次未涵蓋</div>';
+  }
+  function finish(){
+    $("qProg").style.width="100%";
+    $("quizArea").style.display="none"; $("quizResult").style.display="block";
+    score=Math.min(100,score);
+    $("rScore").textContent=score; $("rBar").style.width=score+"%";
+    var grade=score>=90?"優秀":(score>=75?"良好":(score>=60?"及格":"待加強"));
+    $("rGrade").textContent=grade;
+    $("rCats").innerHTML=bars(catStat,CATNAME,"");
+    $("rCT").innerHTML=bars(ctStat,CTNAME,"ct-");
+    $("rCalib").innerHTML=
+      '<div class="ci good"><span>答對·有把握（扎實）</span><b>'+calib.gs+'</b></div>'+
+      '<div class="ci warn"><span>答對·沒把握（待鞏固）</span><b>'+calib.gw+'</b></div>'+
+      '<div class="ci bad"><span>答錯·有把握（迷思）</span><b>'+calib.bs+'</b></div>'+
+      '<div class="ci warn"><span>答錯·沒把握（待學習）</span><b>'+calib.bw+'</b></div>';
+    var weakCat=["hw","sw","nw"].filter(function(k){return catStat[k].t>0 && catStat[k].c/catStat[k].t<0.6;}).map(function(k){return CATNAME[k];});
+    var weakCT=["de","pa","ab","al"].filter(function(k){return ctStat[k].t>0 && ctStat[k].c/ctStat[k].t<0.6;}).map(function(k){return CTFULL[k];});
+    var sug="<b>學習建議（"+grade+"）：</b>";
+    if(weakCat.length) sug+=" 主軸「"+weakCat.join("、")+"」答對率偏低，建議回該分頁重做安裝模擬與故障排除。";
+    if(weakCT.length) sug+=" 運算思維面向「"+weakCT.join("、")+"」較弱，可多練習對應題型。";
+    if(calib.bs>0) sug+=" 有 "+calib.bs+" 題『很有把握卻答錯』，屬迷思概念，請優先澄清。";
+    if(!weakCat.length && !weakCT.length && calib.bs===0) sug+=" 三大主軸與 CT 構面表現均衡、把握度校準良好，可挑戰進階難度。";
+    $("rSug").innerHTML=sug;
+    var wrong=history.filter(function(r){return !r.right;});
+    $("rReview").innerHTML = wrong.length ? wrong.map(function(r){
+      return '<div class="ri"><div class="rq">第 '+r.n+' 題（'+CATNAME[r.cat]+'·CT '+CTNAME[r.ct]+'）'+r.stem+'</div>'+
+        '<div class="ra">你的選擇：<span class="x">'+r.pick+'</span>　正解：<span class="o">'+r.correct+'</span></div></div>';
+    }).join("") : '<div class="empty">✔ 全部答對，沒有錯題！</div>';
+  }
+
+  function csvCell(s){ return '"'+String(s).replace(/"/g,'""')+'"'; }
+  function exportCsv(){
+    if(!history.length) return;
+    var head=["題號","主軸","CT構面","難度","題目","你的選擇","正解","對錯","把握度"];
+    var rows=history.map(function(r){
+      return [r.n,CATNAME[r.cat],CTFULL[r.ct],LVNAME[r.lv],r.stem,r.pick,r.correct,(r.right?"○":"✘"),(r.conf===3?"很有把握":r.conf===2?"普通":"用猜的")].map(csvCell).join(",");
+    });
+    var summary='"總分","'+score+' / 100"';
+    var csv="\uFEFF"+head.map(csvCell).join(",")+"\n"+rows.join("\n")+"\n"+summary+"\n";
+    var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+    var a=document.createElement("a");
+    var ts=new Date().toISOString().slice(0,16).replace(/[:T]/g,"-");
+    a.href=URL.createObjectURL(blob); a.download="作答紀錄_"+ts+".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){URL.revokeObjectURL(a.href);},1500);
+  }
+
+  $("qStart").addEventListener("click", start);
+  $("qAgain").addEventListener("click", function(){ $("quizResult").style.display="none"; start(); });
+  $("qExportCsv").addEventListener("click", exportCsv);
+  $("qPrint").addEventListener("click", function(){ window.print(); });
+
+  // 教學↔評量橋接：各子頁面「本主軸速測」
+  window.ccStartQuiz=function(cat){
+    var r=document.querySelector('input[name="qcat"][value="'+(cat||"all")+'"]'); if(r) r.checked=true;
+    if(window.__show) window.__show("assess");
+    start();
+  };
+  [].slice.call(document.querySelectorAll("[data-quiz]")).forEach(function(b){
+    b.addEventListener("click", function(){ window.ccStartQuiz(b.getAttribute("data-quiz")); });
+  });
+})();
+/* ============================================================
+   7) 課後評量系統（具名測驗 + 複習 + 成績統計）
+============================================================ */
+(function exam(){
+  function bank(){ return window.CC_BANK||[]; }
+  function CAT(){ return window.CC_CAT||{hw:"硬體",sw:"軟體",nw:"網路"}; }
+  function CT(){ return window.CC_CT||{de:"拆解",pa:"模式",ab:"抽象",al:"演算"}; }
+  function CTF(){ return window.CC_CTF||{de:"問題拆解",pa:"模式辨識",ab:"抽象化",al:"演算法思維"}; }
+  function LV(){ return window.CC_LV||{1:"基礎",2:"進階"}; }
+
+  /* ---- 本機儲存（localStorage，失敗時退回記憶體） ---- */
+  var STKEY="cc_exam_records_v1", memMode=false, mem=[];
+  try{ localStorage.setItem("__cc_t","1"); localStorage.removeItem("__cc_t"); }catch(e){ memMode=true; }
+  function load(){ if(memMode) return mem; try{ var s=localStorage.getItem(STKEY); return s?JSON.parse(s):[]; }catch(e){ memMode=true; return mem; } }
+  function persist(a){ if(memMode){ mem=a; return; } try{ localStorage.setItem(STKEY,JSON.stringify(a)); }catch(e){ memMode=true; mem=a; } }
+  function addRecord(r){ var a=load(); a.push(r); persist(a); }
+
+  /* ---- 分頁切換 ---- */
+  [].slice.call(document.querySelectorAll("#examSeg .segbtn")).forEach(function(b){
+    b.addEventListener("click", function(){
+      [].slice.call(document.querySelectorAll("#examSeg .segbtn")).forEach(function(x){ x.classList.toggle("active",x===b); });
+      var seg=b.getAttribute("data-seg");
+      $("examStudent").style.display = seg==="student"?"":"none";
+      $("examStats").style.display = seg==="stats"?"":"none";
+      if(seg==="stats") gateStats();
+    });
+  });
+
+  /* ---- 教師統計密碼閘 ---- */
+  var TEACHER_PW="npust1728", authed=false;
+  function gateStats(){
+    if(authed){ $("stLock").style.display="none"; $("stContent").style.display="block"; renderStats(); }
+    else { $("stLock").style.display="block"; $("stContent").style.display="none"; $("stPwMsg").classList.remove("show"); var p=$("stPw"); if(p){ p.value=""; try{ p.focus(); }catch(e){} } }
+  }
+  $("stEnter").addEventListener("click", function(){
+    if(($("stPw").value||"")===TEACHER_PW){ authed=true; gateStats(); }
+    else { $("stPwMsg").textContent="密碼錯誤，請再試一次。"; $("stPwMsg").classList.add("show"); }
+  });
+  $("stPw").addEventListener("keydown", function(e){ if(e.key==="Enter"||e.keyCode===13){ $("stEnter").click(); } });
+
+  /* ---- 學生測驗 ---- */
+  var quiz=[], idx=0, score=0, locked=false, reviewMode=false, practice=false, who={};
+  var catStat, ctStat, calib, history;
+  function resetStats(){ catStat={hw:{c:0,t:0},sw:{c:0,t:0},nw:{c:0,t:0}}; ctStat={de:{c:0,t:0},pa:{c:0,t:0},ab:{c:0,t:0},al:{c:0,t:0}}; calib={gs:0,gw:0,bs:0,bw:0}; history=[]; idx=0; score=0; locked=false; }
+
+  /* ---- 倒數計時（約 30 分鐘） ---- */
+  var EXAM_SEC=30*60, timerId=null, remain=0, timedOut=false;
+  function fmtClock(s){ s=Math.max(0,s|0); var m=Math.floor(s/60), ss=s%60; return (m<10?"0":"")+m+":"+(ss<10?"0":"")+ss; }
+  function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
+  function startTimer(){
+    stopTimer(); remain=EXAM_SEC;
+    var el=$("exTimer"); el.style.display=""; el.classList.remove("warn"); el.textContent="⏱ "+fmtClock(remain);
+    timerId=setInterval(function(){
+      remain--;
+      el.textContent="⏱ "+fmtClock(remain);
+      if(remain<=60) el.classList.add("warn");
+      if(remain<=0){ stopTimer(); timedOut=true; if($("exArea").style.display!=="none") finish(); }
+    },1000);
+  }
+
+  function startFrom(list,isPractice){
+    quiz=list.slice(); resetStats(); practice=!!isPractice;
+    $("exMsg").classList.remove("show");
+    $("exLogin").style.display="none"; $("exArea").style.display="block"; $("exResult").style.display="none";
+    $("exWho").textContent = who.name?("作答者："+who.name):"";
+    if(!reviewMode && !isPractice){ startTimer(); } else { stopTimer(); $("exTimer").style.display="none"; }
+    renderQ();
+  }
+  function start(){
+    var name=($("exName").value||"").trim(), id=($("exId").value||"").trim(), cls=($("exCls").value||"").trim();
+    reviewMode=$("exReview").checked;
+    if(!reviewMode && (!name||!id)){ $("exMsg").textContent="請先輸入姓名與學號（或勾選『複習模式』進行不計分練習）。"; $("exMsg").classList.add("show"); return; }
+    who={name:name,id:id,cls:cls};
+    var cat=document.querySelector('input[name="excat"]:checked').value;
+    var lv=document.querySelector('input[name="exlevel"]:checked').value;
+    var cnt=parseInt($("exCount").value,10);
+    var pool=bank().filter(function(q){ return (cat==="all"||q.cat===cat)&&(lv==="all"||String(q.lv)===lv); });
+    pool.sort(function(){return Math.random()-0.5;});
+    if(cnt>0) pool=pool.slice(0,Math.min(pool.length,cnt));
+    if(!pool.length){ $("exMsg").textContent="此範圍與難度沒有可出的題目。"; $("exMsg").classList.add("show"); return; }
+    who.scope=cat; who.level=lv;
+    startFrom(pool,false);
+  }
+  function updateVerify(){ var o=$("exOpts").querySelector("input:checked"), c=$("exConfWrap").querySelector("input:checked"); $("exVerify").disabled=!(o&&c); }
+  function renderQ(){
+    locked=false; var q=quiz[idx];
+    $("exProg").style.width=Math.round(idx/quiz.length*100)+"%";
+    $("exIdx").textContent="第 "+(idx+1)+" / "+quiz.length+" 題";
+    var b=$("exCatBadge"); b.className="qcat "+q.cat; b.textContent=CAT()[q.cat];
+    $("exCTBadge").textContent="CT·"+CT()[q.ct]; $("exLvBadge").textContent=LV()[q.lv];
+    $("exStem").textContent=q.stem;
+    $("exOpts").innerHTML=q.opts.map(function(o,i){ return '<label class="opt" data-i="'+i+'"><input type="radio" name="exopt"> '+o+'</label>'; }).join("");
+    [].slice.call($("exConfWrap").querySelectorAll("input")).forEach(function(r){ r.checked=false; });
+    $("exConfWrap").classList.add("show");
+    $("exExplain").className="explain"; $("exExplain").innerHTML="";
+    $("exVerify").style.display=""; $("exVerify").disabled=true; $("exNext").style.display="none";
+  }
+  $("exOpts").addEventListener("change", updateVerify);
+  $("exConfWrap").addEventListener("change", updateVerify);
+  $("exVerify").addEventListener("click", function(){
+    if(locked)return; locked=true; var q=quiz[idx];
+    var pi=parseInt($("exOpts").querySelector("input:checked").closest(".opt").getAttribute("data-i"),10);
+    var conf=parseInt($("exConfWrap").querySelector("input:checked").value,10);
+    [].slice.call($("exOpts").querySelectorAll(".opt")).forEach(function(o,i){ o.classList.add("disabled"); if(i===q.ans)o.classList.add("correct"); else if(i===pi)o.classList.add("wrong"); });
+    var right=(pi===q.ans);
+    catStat[q.cat].t++; ctStat[q.ct].t++;
+    if(right){ score+=Math.round(100/quiz.length); catStat[q.cat].c++; ctStat[q.ct].c++; }
+    if(right){ conf===3?calib.gs++:calib.gw++; } else { conf===3?calib.bs++:calib.bw++; }
+    history.push({n:idx+1,cat:q.cat,ct:q.ct,lv:q.lv,stem:q.stem,opts:q.opts,ans:q.ans,exp:q.exp,pi:pi,right:right,conf:conf});
+    var cnote=right?(conf===3?"觀念扎實。":(conf===1?"用猜的卻答對，建議再複習鞏固。":"答對，繼續保持。")):(conf===3?"很有把握卻答錯——可能是迷思概念，需特別澄清。":(conf===1?"不確定且答錯，屬尚未學會。":"答錯，請對照解析修正。"));
+    var ex=$("exExplain"); ex.classList.add("show");
+    ex.innerHTML=(right?"<b>✔ 答對！</b> ":"<b>✘ 答錯。</b> 正解：<b>"+q.opts[q.ans]+"</b>。")+q.exp+'<div style="margin-top:6px;color:var(--warn)"><b>把握度回饋：</b>'+cnote+'</div>';
+    $("exConfWrap").classList.remove("show"); $("exVerify").style.display="none";
+    $("exNext").style.display=""; $("exNext").textContent=(idx<quiz.length-1?"下一題 →":"看成績 →");
+  });
+  $("exNext").addEventListener("click", function(){ if(idx<quiz.length-1){ idx++; renderQ(); } else finish(); });
+
+  function bars(map,names,pfx){ var h=""; Object.keys(map).forEach(function(k){ var s=map[k]; if(s.t===0)return; var p=Math.round(s.c/s.t*100); h+='<div class="catbar '+pfx+k+'"><span class="cl">'+names[k]+'</span><span class="ct"><i style="width:'+p+'%"></i></span><span class="cn">'+s.c+"/"+s.t+'</span></div>'; }); return h||'<div style="color:var(--muted);font-size:13px">—</div>'; }
+
+  function finish(){
+    stopTimer();
+    $("exProg").style.width="100%"; $("exArea").style.display="none"; $("exResult").style.display="block";
+    var timed=(!reviewMode && !practice);
+    var timeUsed = timed ? (EXAM_SEC - Math.max(0,remain)) : null;
+    score=Math.min(100,score);
+    $("exScore").textContent=score; $("exBar").style.width=score+"%";
+    var grade=score>=90?"優秀":(score>=75?"良好":(score>=60?"及格":"待加強"));
+    $("exGrade").textContent=grade;
+    $("exCats").innerHTML=bars(catStat,CAT(),""); $("exCT").innerHTML=bars(ctStat,CT(),"ct-");
+    $("exCalib").innerHTML='<div class="ci good"><span>答對·有把握</span><b>'+calib.gs+'</b></div><div class="ci warn"><span>答對·沒把握（待鞏固）</span><b>'+calib.gw+'</b></div><div class="ci bad"><span>答錯·有把握（迷思）</span><b>'+calib.bs+'</b></div><div class="ci warn"><span>答錯·沒把握</span><b>'+calib.bw+'</b></div>';
+    var wc=["hw","sw","nw"].filter(function(k){return catStat[k].t>0&&catStat[k].c/catStat[k].t<0.6;}).map(function(k){return CAT()[k];});
+    var wt=["de","pa","ab","al"].filter(function(k){return ctStat[k].t>0&&ctStat[k].c/ctStat[k].t<0.6;}).map(function(k){return CTF()[k];});
+    var sug="<b>學習建議（"+grade+"）：</b>"; if(wc.length)sug+=" 主軸「"+wc.join("、")+"」偏弱，建議回該模組複習。"; if(wt.length)sug+=" 運算思維「"+wt.join("、")+"」較弱。"; if(calib.bs>0)sug+=" 有 "+calib.bs+" 題迷思（很有把握卻答錯），請優先澄清。"; if(!wc.length&&!wt.length&&calib.bs===0)sug+=" 表現均衡、把握度校準良好，可挑戰進階。"; $("exSug").innerHTML=sug;
+    var wrong=history.filter(function(r){return !r.right;});
+    $("exReviewList").innerHTML = wrong.length? wrong.map(function(r){ return '<div class="ri"><div class="rq">第 '+r.n+' 題（'+CAT()[r.cat]+'·CT '+CT()[r.ct]+'）'+r.stem+'</div><div class="ra">你的選擇：<span class="x">'+r.opts[r.pi]+'</span>　正解：<span class="o">'+r.opts[r.ans]+'</span></div><div class="re">'+(r.exp||"")+'</div></div>'; }).join("") : '<div class="empty">✔ 全部答對，沒有錯題！</div>';
+    var saved=false;
+    if(!reviewMode && !practice && who.name){
+      addRecord({ts:Date.now(),name:who.name,id:who.id,cls:who.cls,scope:who.scope,level:who.level,count:quiz.length,score:score,grade:grade,cat:catStat,ct:ctStat,calib:calib,timeUsed:timeUsed});
+      saved=true;
+    }
+    if(saved && window.ccProg && (who.scope==="hw"||who.scope==="sw"||who.scope==="nw")) ccProg.mark(who.scope,"quiz");
+    $("exSaved").textContent = (timedOut?"⏰ 時間到，自動交卷　":"") + (saved?"✔ 已記錄到成績統計" : ((reviewMode||practice)?"（練習／複習，未計入統計）":""));
+    timedOut=false;
+  }
+
+  $("exStart").addEventListener("click", start);
+  $("exAgain").addEventListener("click", function(){ stopTimer(); $("exTimer").style.display="none"; $("exResult").style.display="none"; $("exLogin").style.display="block"; window.scrollTo({top:0,behavior:REDUCE?"auto":"smooth"}); });
+  $("exRetryWrong").addEventListener("click", function(){ var w=history.filter(function(r){return !r.right;}).map(function(r){ return bank().filter(function(b){return b.stem===r.stem;})[0]; }).filter(Boolean); if(!w.length)return; startFrom(w,true); });
+  $("exPrint").addEventListener("click", function(){ window.print(); });
+
+  /* ---- CSV ---- */
+  function csv(s){ return '"'+String(s==null?"":s).replace(/"/g,'""')+'"'; }
+  function dl(name,text){ var blob=new Blob(["\uFEFF"+text],{type:"text/csv;charset=utf-8;"}); var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(a.href);},1500); }
+  $("exMyCsv").addEventListener("click", function(){
+    var head=["題號","主軸","CT","難度","題目","你的選擇","正解","對錯","把握度"];
+    var rows=history.map(function(r){ return [r.n,CAT()[r.cat],CTF()[r.ct],LV()[r.lv],r.stem,r.opts[r.pi],r.opts[r.ans],(r.right?"○":"✘"),(r.conf===3?"很有把握":r.conf===2?"普通":"用猜的")].map(csv).join(","); });
+    var meta='"姓名","'+(who.name||"")+'","學號","'+(who.id||"")+'","分數","'+score+'/100"';
+    dl("成績單_"+(who.id||who.name||"anon")+".csv", head.map(csv).join(",")+"\n"+rows.join("\n")+"\n"+meta+"\n");
+  });
+
+  /* ---- 教師成績統計 ---- */
+  function scopeName(s){ return s==="all"?"綜合":(CAT()[s]||s); }
+  function lvName(l){ return l==="all"?"全部":(LV()[l]||l); }
+  function pad(n){ return (n<10?"0":"")+n; }
+  function fmtTime(ts){ var d=new Date(ts); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+  function esc(s){ s=s==null?"":String(s); return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function card(v,k){ return '<div class="statcard"><div class="v">'+v+'</div><div class="k">'+k+'</div></div>'; }
+  function renderStats(){
+    var recs=load(), has=recs.length>0;
+    $("stEmpty").style.display=has?"none":"block"; $("stBody").style.display=has?"block":"none";
+    if(!has) return;
+    var n=recs.length, scores=recs.map(function(r){return r.score;});
+    var avg=Math.round(scores.reduce(function(a,b){return a+b;},0)/n);
+    var max=Math.max.apply(null,scores), min=Math.min.apply(null,scores);
+    var pass=recs.filter(function(r){return r.score>=60;}).length;
+    var ppl={}; recs.forEach(function(r){ ppl[(r.id||r.name||"?")]=1; });
+    $("stCards").innerHTML=card(n,"測驗次數")+card(Object.keys(ppl).length,"學生人數")+card(avg,"平均分")+card(max,"最高分")+card(min,"最低分")+card(Math.round(pass/n*100)+"%","及格率");
+    var bk=[["90–100",0],["80–89",0],["70–79",0],["60–69",0],["0–59",0]];
+    recs.forEach(function(r){ var s=r.score; if(s>=90)bk[0][1]++; else if(s>=80)bk[1][1]++; else if(s>=70)bk[2][1]++; else if(s>=60)bk[3][1]++; else bk[4][1]++; });
+    var mx=Math.max(1,Math.max.apply(null,bk.map(function(b){return b[1];})));
+    $("stHist").innerHTML=bk.map(function(b){ return '<div class="hbar"><span class="hl">'+b[0]+'</span><span class="ht"><i style="width:'+Math.round(b[1]/mx*100)+'%"></i></span><span class="hn">'+b[1]+'</span></div>'; }).join("");
+    var cAgg={hw:{c:0,t:0},sw:{c:0,t:0},nw:{c:0,t:0}}, tAgg={de:{c:0,t:0},pa:{c:0,t:0},ab:{c:0,t:0},al:{c:0,t:0}};
+    recs.forEach(function(r){ ["hw","sw","nw"].forEach(function(k){ if(r.cat&&r.cat[k]){cAgg[k].c+=r.cat[k].c;cAgg[k].t+=r.cat[k].t;} }); ["de","pa","ab","al"].forEach(function(k){ if(r.ct&&r.ct[k]){tAgg[k].c+=r.ct[k].c;tAgg[k].t+=r.ct[k].t;} }); });
+    $("stCat").innerHTML=bars(cAgg,CAT(),""); $("stCT").innerHTML=bars(tAgg,CT(),"ct-");
+    var rows=recs.slice().sort(function(a,b){return b.ts-a.ts;}).map(function(r){ return '<tr><td>'+fmtTime(r.ts)+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.id)+'</td><td>'+esc(r.cls)+'</td><td>'+scopeName(r.scope)+'</td><td>'+lvName(r.level)+'</td><td>'+r.count+'</td><td class="sc">'+r.score+'</td><td>'+r.grade+'</td><td>'+(r.timeUsed!=null?fmtClock(r.timeUsed):"—")+'</td></tr>'; }).join("");
+    $("stTable").innerHTML='<thead><tr><th>時間</th><th>姓名</th><th>學號</th><th>班級</th><th>範圍</th><th>難度</th><th>題數</th><th>分數</th><th>等第</th><th>用時</th></tr></thead><tbody>'+rows+'</tbody>';
+  }
+  $("stRefresh").addEventListener("click", renderStats);
+  $("stClear").addEventListener("click", function(){ if(confirm("確定清除本機所有課後評量紀錄？此動作無法復原。")){ persist([]); renderStats(); } });
+  $("stCsv").addEventListener("click", function(){
+    var recs=load(); if(!recs.length)return;
+    var head=["時間","姓名","學號","班級","範圍","難度","題數","分數","等第","用時","硬體答對","硬體題數","軟體答對","軟體題數","網路答對","網路題數"];
+    var rows=recs.slice().sort(function(a,b){return a.ts-b.ts;}).map(function(r){ var c=r.cat||{}; function g(k,f){return c[k]?c[k][f]:0;} return [fmtTime(r.ts),r.name,r.id,r.cls,scopeName(r.scope),lvName(r.level),r.count,r.score,r.grade,(r.timeUsed!=null?fmtClock(r.timeUsed):""),g("hw","c"),g("hw","t"),g("sw","c"),g("sw","t"),g("nw","c"),g("nw","t")].map(csv).join(","); });
+    dl("課後評量成績統計.csv", head.map(csv).join(",")+"\n"+rows.join("\n")+"\n");
+  });
+
+  /* ---- 由課程子頁啟動課後評量 ---- */
+  window.ccStartExam=function(cat){
+    if(window.__show) window.__show("exam");
+    [].slice.call(document.querySelectorAll("#examSeg .segbtn")).forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-seg")==="student"); });
+    $("examStudent").style.display=""; $("examStats").style.display="none";
+    var r=document.querySelector('input[name="excat"][value="'+(cat||"all")+'"]'); if(r) r.checked=true;
+    stopTimer(); $("exTimer").style.display="none";
+    $("exLogin").style.display="block"; $("exArea").style.display="none"; $("exResult").style.display="none";
+    $("exMsg").classList.remove("show");
+    var nm=$("exName"); if(nm){ try{ nm.focus(); }catch(e){} }
+  };
+  [].slice.call(document.querySelectorAll("[data-exam]")).forEach(function(b){
+    b.addEventListener("click", function(){ window.ccStartExam(b.getAttribute("data-exam")); });
+  });
+})();
+/* ============================================================
+   8) 教學講義／簡報（每單元嵌入 Google 簡報／PDF／PPT 或本機 PDF）
+============================================================ */
+(function slides(){
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+  function escAttr(s){ return String(s).replace(/"/g,"&quot;"); }
+  function resolveSrc(u){ return /\.pptx?($|[?#])/i.test(u) ? ("https://view.officeapps.live.com/op/embed.aspx?src="+encodeURIComponent(u)) : u; }
+  [].slice.call(document.querySelectorAll("[data-slides]")).forEach(function(box){
+    var unit=box.getAttribute("data-slides"), key="cc_slides_"+unit;
+    var url=box.querySelector(".sl-url"), loadBtn=box.querySelector(".sl-load"),
+        fileInp=box.querySelector(".sl-file"), openBtn=box.querySelector(".sl-open"),
+        clearBtn=box.querySelector(".sl-clear"), viewer=box.querySelector(".sl-viewer"),
+        msg=box.querySelector(".sl-msg");
+    var current="", objUrl=null;
+    function setMsg(t){ if(t){ msg.textContent=t; msg.classList.add("show"); } else { msg.classList.remove("show"); msg.textContent=""; } }
+    function clearObj(){ if(objUrl){ try{ URL.revokeObjectURL(objUrl); }catch(e){} objUrl=null; } }
+    function render(src){ viewer.innerHTML='<iframe src="'+escAttr(src)+'" allowfullscreen referrerpolicy="no-referrer"></iframe>'; current=src; openBtn.disabled=false; clearBtn.disabled=false; }
+    function loadUrl(u){
+      u=(u||"").trim();
+      if(!u){ setMsg("請先貼上連結，或改用「開啟本機 PDF」。"); return; }
+      if(!/^https?:\/\//i.test(u)){ setMsg("請輸入有效網址（以 http(s):// 開頭）。"); return; }
+      setMsg(""); clearObj(); render(resolveSrc(u)); lsSet(key,u);
+    }
+    loadBtn.addEventListener("click", function(){ loadUrl(url.value); });
+    url.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.keyCode===13) loadUrl(url.value); });
+    fileInp.addEventListener("change", function(){
+      var f=fileInp.files&&fileInp.files[0]; if(!f) return;
+      if(f.type!=="application/pdf" && !/\.pdf$/i.test(f.name)){ setMsg("本機檔案僅支援 PDF；PPT 請先轉成 PDF，或改用線上連結。"); fileInp.value=""; return; }
+      setMsg(""); clearObj(); objUrl=URL.createObjectURL(f); render(objUrl); lsDel(key);
+    });
+    openBtn.addEventListener("click", function(){ if(current) window.open(current,"_blank","noopener"); });
+    clearBtn.addEventListener("click", function(){
+      clearObj(); viewer.innerHTML='<div class="sl-empty">尚未載入講義。貼上連結或開啟本機 PDF 後，講義會顯示在此進行簡報。</div>';
+      current=""; openBtn.disabled=true; clearBtn.disabled=true; url.value=""; lsDel(key); setMsg("");
+    });
+    var saved=lsGet(key);
+    if(saved){ url.value=saved; render(resolveSrc(saved)); }
+  });
+})();
+/* ============================================================
+   9) 學習進度（分層完成度，提升學生參與）
+============================================================ */
+(function progress(){
+  var KEY="cc_progress_v1", state={};
+  try{ var s=localStorage.getItem(KEY); state=s?JSON.parse(s):{}; }catch(e){ state={}; }
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
+  function render(){
+    [].slice.call(document.querySelectorAll('.unit-chip[data-scroll]')).forEach(function(c){
+      var p=c.getAttribute("data-scroll").split("-"); // step-unit
+      c.classList.toggle("done", !!(state[p[1]]&&state[p[1]][p[0]]));
+    });
+  }
+  function mark(unit,step){
+    if(!unit||!step) return;
+    if(!state[unit]) state[unit]={};
+    if(state[unit][step]) return;
+    state[unit][step]=true; save(); render();
+  }
+  window.ccProg={mark:mark,render:render};
+  [].slice.call(document.querySelectorAll('.unit-chip[data-scroll^="sim-"]')).forEach(function(c){
+    c.addEventListener("click", function(){ mark(c.getAttribute("data-scroll").split("-")[1],"sim"); });
+  });
+  render();
+})();
+
+/* ============================================================
+   10) 內建教學講義（由單元內容生成．約 20 張．與課後評量高度對應）
+============================================================ */
+(function decks(){
+  var REF={
+    hw:[{label:"《計算機概論》系所指定教科書"},{label:"《Code：軟硬體背後的語言》(Petzold)"},{label:"Little Man Computer 模擬器",url:"https://peterhigginson.co.uk/lmc/"},{label:"Crash Course CS（YouTube）",url:"https://www.youtube.com/playlist?list=PL8dPuuaLjXtNlUrzyH5r6jN9ulIgZBpdo"}],
+    sw:[{label:"《作業系統概念》(Silberschatz)"},{label:"《現代作業系統》(Tanenbaum)"},{label:"Python 官方教學",url:"https://docs.python.org/zh-tw/3/tutorial/"},{label:"Google Colab",url:"https://colab.research.google.com/"}],
+    nw:[{label:"《計算機網路：自頂向下》(Kurose & Ross)"},{label:"《電腦網路》(Tanenbaum)"},{label:"Cloudflare：What is DNS?",url:"https://www.cloudflare.com/learning/dns/what-is-dns/"},{label:"HiveMQ MQTT Broker",url:"https://www.hivemq.com/"}]
+  };
+  var DATA={
+    hw:[
+      {cover:1,k:"教學講義・硬體",t:"硬體 Hardware — 電腦的「身體」",pts:["看得見、摸得到的實體零件","本單元：五大單元 → 核心元件 → 開機 POST → 關機 → 故障診斷 → 動手做"]},
+      {k:"學習地圖",t:"本單元架構（分層）",pts:["① 基本組成：五大單元、核心元件","② 運作流程：開機 POST、關機程序","③ 排錯思維：徵狀 → 缺哪個元件","④ 動手做與課後評量"]},
+      {k:"基本組成",t:"硬體*五大單元*",pts:["輸入單元、輸出單元、記憶體","控制單元（CU）、算術邏輯單元（ALU）","*CPU ＝ CU ＋ ALU*，負責控制與運算"]},
+      {k:"輸入／輸出",t:"分清*輸入*與*輸出*裝置",pts:["輸入：*鍵盤*、滑鼠、感測器（把資料送進電腦）","輸出：螢幕、喇叭、印表機（把結果送出）","考點：*鍵盤屬於輸入裝置*"]},
+      {k:"CPU",t:"CPU 指令週期",pts:["一道指令的處理順序：","*提取 Fetch → 解碼 Decode → 執行 Execute*","循環不斷進行"]},
+      {k:"記憶體階層",t:"速度與容量的取捨",pts:["暫存器 → 快取 → 主記憶體（RAM）→ 儲存體","越上層越快、越貴、容量越小"]},
+      {k:"RAM",t:"主記憶體 RAM 的關鍵特性",pts:["*RAM 是揮發性記憶體，斷電即清空*","執行中的程式與資料放在 RAM","所以資料要及時存回儲存體"]},
+      {k:"儲存體",t:"永久保存資料",pts:["SSD／HDD：*斷電後資料仍在*","RAM 快但揮發、儲存體慢但永久","兩者分工合作"]},
+      {k:"資料表示",t:"位元與位元組",pts:["bit（位元）是最小單位","*1 Byte（位元組）＝ 8 bit*","資料量單位：KB、MB、GB…"]},
+      {k:"數字系統",t:"二進位轉十進位",pts:["電腦以 0/1 二進位運作","*1011₂ ＝ 1×8 ＋ 0×4 ＋ 1×2 ＋ 1 ＝ 11*","由右至左權重 1,2,4,8…"]},
+      {k:"連接",t:"主機板與匯流排",pts:["主機板連接 CPU、RAM、儲存體與周邊","匯流排是元件之間的資料通道"]},
+      {k:"電源",t:"電源供應器（PSU）",pts:["把市電轉成電腦可用的電壓","供電不足／不穩 → 無法開機或運作不穩"]},
+      {k:"顯示輸出",t:"顯示卡與螢幕",pts:["負責把畫面輸出到螢幕","考點：*主機有運轉、螢幕無訊號 → 顯示卡或螢幕線*"]},
+      {k:"開機程序",t:"按下電源後（POST）",pts:["通電 → *韌體 POST 自我測試*","偵測核心元件是否正常","通過後載入作業系統，畫面出現"]},
+      {k:"開機失敗",t:"POST 偵測不到核心元件",pts:["*缺 RAM 會發出嗶聲示警並中止開機*","嗶聲是重要的診斷線索","先檢查 RAM、電源是否插好"]},
+      {k:"關機程序",t:"為什麼不能直接拔電",pts:["因為 *RAM 揮發、斷電即清空*","*關機前先把資料寫回儲存體*、結束程式","再安全斷電，避免資料遺失"]},
+      {k:"故障診斷",t:"徵狀 → 缺哪個元件",pts:["螢幕無訊號 → *顯示卡／螢幕線*","不能開機、嗶聲 → *RAM／電源*","找不到作業系統 → *儲存體或未裝 OS*"]},
+      {k:"動手做",t:"接著到「① 互動模擬」",pts:["安裝元件、體驗開機 POST 與關機","拔除元件前*先預測、再驗證*徵狀","完成後做「③ 單元課後評量」"]},
+      {k:"參考資料",t:"延伸閱讀與參考",pts:["對照課後評量題目，複習本單元*紅字重點*","教科書 ＋ 模擬器 ＋ 影音，課後自學更扎實"],ref:REF.hw}
+    ],
+    sw:[
+      {cover:1,k:"教學講義・軟體",t:"軟體 Software — 指揮硬體的指令",pts:["驅動硬體運作的程式與指令","本單元：軟體分層 → 開機順序 → OS 角色 → 驅動 → 故障排除 → 動手做"]},
+      {k:"學習地圖",t:"本單元架構（分層）",pts:["① 結構：軟體分層","② 啟動：開機順序、韌體與 OS","③ 程式：IPO、控制結構、函式","④ 排錯、動手做與課後評量"]},
+      {k:"概念",t:"軟體 vs 硬體",pts:["硬體是身體，軟體是*下給硬體的指令*","沒有軟體，硬體不知道要做什麼"]},
+      {k:"軟體分層",t:"由低到高的*分層*",pts:["*韌體 BIOS/UEFI → 作業系統 → 驅動程式 → 應用程式*","公用程式：維護與保護系統","每一層都*依賴下一層*"]},
+      {k:"開機順序",t:"誰最先執行？",pts:["*開機時最先執行的是韌體（BIOS/UEFI）*","內建於主機板，負責喚醒硬體","再把控制權交給作業系統"]},
+      {k:"作業系統",t:"OS 是系統的「總管」",pts:["*作業系統管理硬體、檔案、記憶體與所有程式*","協調資源、提供操作介面","常見：Windows／Linux／macOS"]},
+      {k:"驅動程式",t:"讓 OS 認得特定硬體",pts:["*作業系統靠驅動程式才聽得懂裝置*","考點：*印表機印不出，最可能缺驅動程式*","新硬體常需安裝對應驅動"]},
+      {k:"應用層",t:"應用程式與公用程式",pts:["應用程式：完成使用者任務（文書、瀏覽器…）","公用程式：防毒、磁碟清理等維護工具"]},
+      {k:"程式設計",t:"程式 ＝ 一連串指令",pts:["把要做的事，拆成電腦能執行的步驟","這就是寫程式的本質"]},
+      {k:"IPO 模型",t:"輸入 → 處理 → 輸出",pts:["程式運作的基本模型","*鍵盤 input() 取得的資料屬於 Input（輸入）*","處理後再 Output 輸出結果"]},
+      {k:"控制結構",t:"三種基本結構",pts:["循序、選擇（if）、重複（迴圈）","用來組織程式的邏輯流程"]},
+      {k:"迴圈",t:"重複的事交給迴圈",pts:["考點：*要重複印出 1 到 5，最適合用迴圈*","例如 for 由 1 跑到 5","避免一行行重複地寫"]},
+      {k:"函式與抽象化",t:"把重複程式包成函式",pts:["重複出現的程式 → 包成*函式*重複使用","只保留可重用介面、隱藏細節","這對應運算思維的*抽象化*"]},
+      {k:"運算思維",t:"CT 四構面",pts:["拆解、模式辨識、*抽象化*、演算法","軟體設計處處用到 CT"]},
+      {k:"故障排除",t:"哪一層沒裝／沒起來？",pts:["由低到高檢查：韌體 → OS → 驅動 → 應用","裝置接上卻不動 → 多半缺*驅動程式*","開不了機 → 韌體／OS 問題"]},
+      {k:"動手做",t:"接著到「① 互動模擬」",pts:["依*正確順序*分層安裝軟體","觀察缺某一層時系統的反應","完成後做「③ 單元課後評量」"]},
+      {k:"參考資料",t:"延伸閱讀與參考",pts:["對照課後評量題目，複習本單元*紅字重點*","用 Colab 動手寫，最能內化 IPO 與控制結構"],ref:REF.sw}
+    ],
+    nw:[
+      {cover:1,k:"教學講義・網路",t:"網路 Network — 連到外面世界",pts:["讓電腦彼此與網際網路通訊","本單元：連線要素 → 資料路徑 → DNS → 故障定位 → 連線測試 → 動手做"]},
+      {k:"學習地圖",t:"本單元架構（分層）",pts:["① 要素：IP、遮罩、閘道、DNS","② 路徑：封包怎麼來回","③ 應用：IoT、行動網路、MQTT","④ 排錯、連線測試與動手做"]},
+      {k:"為何要網路",t:"連線的目的",pts:["分享資源、即時通訊、存取雲端","資料在裝置之間*雙向*傳送"]},
+      {k:"連線要素",t:"上網*缺一不可*的設定",pts:["*IP 位址*、子網路遮罩","*預設閘道*、*DNS*","四者各管通訊路上的一段"]},
+      {k:"IP 位址",t:"電腦的*門牌*",pts:["*IP 位址＝電腦在網路上的門牌*","讓資料知道要送到哪一台"]},
+      {k:"遮罩與閘道",t:"分區與出口",pts:["子網路遮罩：分辨「自己這區」與「外面」","*預設閘道＝通往外面網路的出口（路由器）*"]},
+      {k:"DNS",t:"網址翻成 IP 的*電話簿*",pts:["*DNS 把網址（google.com）翻譯成 IP 位址*","人記網址、電腦用 IP"]},
+      {k:"資料路徑",t:"封包怎麼送出去（雙向）",pts:["本機 → 交換器／路由器 → 預設閘道","→ 網際網路 → 目的地","再*原路回應*回來"]},
+      {k:"主從模型",t:"用戶端 — 伺服器",pts:["用戶端發出請求、伺服器回應","資料以*封包*分段傳送"]},
+      {k:"DNS 解析",t:"輸入網址後發生什麼",pts:["輸入網址 → 先問 DNS → 取得 IP → 連線","考點：*IP 能 ping 通、網址打不開 → DNS 故障*"]},
+      {k:"物聯網 IoT",t:"三層架構",pts:["*感知層（感測器）* → 網路層 → 應用層","考點：*溫溼度感測器屬於感知層*"]},
+      {k:"資料格式",t:"感測資料常用格式",pts:["*感測資料上雲常用 JSON*（輕量、易讀）","結構清楚，方便 API 交換"]},
+      {k:"行動網路",t:"4G／5G 的角色",pts:["*4G/5G 提供行動裝置無線即時連網與傳輸*","是物聯網行動傳輸的基礎"]},
+      {k:"MQTT",t:"物聯網即時傳輸協定",pts:["*MQTT 採發布／訂閱（Pub/Sub）模型*","透過 Broker 轉送訊息","適合即時、低頻寬的 IoT"]},
+      {k:"端管雲",t:"資料流：感測 → 雲端",pts:["感測（IoT）→ 行動傳輸（4G/5G・MQTT）","→ 雲端（資料庫）→ AI 分析／呈現"]},
+      {k:"故障定位",t:"通與不通怎麼判讀",pts:["完全不通 → 網路卡／IP 設定","*區網通、外網不通 → 預設閘道／對外線路*","IP 通、網址不開 → *DNS*"]},
+      {k:"連線測試",t:"怎麼檢查",pts:["ping：測試是否連得到","逐項檢查 IP／遮罩／閘道／DNS 是否正確"]},
+      {k:"動手做",t:"接著到「① 互動模擬」",pts:["設定 IP／遮罩／閘道／DNS 並測試連線","故意設錯，觀察故障徵狀","完成後做「③ 單元課後評量」"]},
+      {k:"參考資料",t:"延伸閱讀與參考",pts:["對照課後評量題目，複習本單元*紅字重點*","DNS、閘道、MQTT、IoT 為高頻考點"],ref:REF.nw}
+    ]
+  };
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function escAttr(s){ return esc(s).replace(/"/g,"&quot;"); }
+  function fmt(t){ return esc(t).replace(/\*([^*]+)\*/g,'<span class="hl">$1</span>'); }
+  function refHTML(r){ if(!r||!r.length) return ""; return '<div class="ds-ref"><b>📚 參考：</b>'+r.map(function(x){ return x.url? '<a href="'+escAttr(x.url)+'" target="_blank" rel="noopener">'+esc(x.label)+'</a>' : esc(x.label); }).join("　·　")+'</div>'; }
+  function slideHTML(s){
+    var lis=(s.pts||[]).map(function(p){ return "<li>"+fmt(p)+"</li>"; }).join("");
+    return '<div class="ds-kicker">'+esc(s.k||"")+'</div><h3 class="ds-title">'+fmt(s.t)+'</h3><ul class="ds-pts">'+lis+'</ul>'+refHTML(s.ref);
+  }
+  var ov=document.createElement("div"); ov.className="deck-ov";
+  ov.innerHTML='<div class="dov-stage" id="dovStage"></div><div class="dov-bar"><button class="btn" id="dovPrev">◀ 上一張</button><span class="dov-pos" id="dovPos"></span><button class="btn" id="dovNext">下一張 ▶</button><span class="spacer"></span><button class="btn" id="dovClose">✕ 結束簡報（Esc）</button></div>';
+  document.body.appendChild(ov);
+  var dovStage=ov.querySelector("#dovStage"), dovPos=ov.querySelector("#dovPos"), ovUnit=null, ovIdx=0;
+  function renderOv(){ var d=DATA[ovUnit]; dovStage.innerHTML=slideHTML(d[ovIdx]); dovPos.textContent=(ovIdx+1)+" / "+d.length; }
+  function onKey(e){ if(e.key==="Escape")closeOv(); else if(e.key==="ArrowRight"||e.key===" "){ ovIdx=Math.min(DATA[ovUnit].length-1,ovIdx+1); renderOv(); } else if(e.key==="ArrowLeft"){ ovIdx=Math.max(0,ovIdx-1); renderOv(); } }
+  function openOv(unit,idx){ ovUnit=unit; ovIdx=idx||0; renderOv(); ov.classList.add("show"); document.addEventListener("keydown",onKey); }
+  function closeOv(){ ov.classList.remove("show"); document.removeEventListener("keydown",onKey); }
+  ov.querySelector("#dovPrev").addEventListener("click",function(){ ovIdx=Math.max(0,ovIdx-1); renderOv(); });
+  ov.querySelector("#dovNext").addEventListener("click",function(){ ovIdx=Math.min(DATA[ovUnit].length-1,ovIdx+1); renderOv(); });
+  ov.querySelector("#dovClose").addEventListener("click",closeOv);
+  Object.keys(DATA).forEach(function(unit){
+    var stage=$("deck-"+unit), pos=$("dpos-"+unit); if(!stage) return;
+    var slides=DATA[unit], i=0;
+    function render(){ var s=slides[i]; stage.className="deck"+(s.cover?" cover":""); stage.innerHTML=slideHTML(s); if(pos) pos.textContent=(i+1)+" / "+slides.length; if(i===slides.length-1 && window.ccProg) ccProg.mark(unit,"lec"); }
+    function go(d){ i=Math.max(0,Math.min(slides.length-1,i+d)); render(); }
+    var prev=document.querySelector('.deck-prev[data-deck="'+unit+'"]'),
+        next=document.querySelector('.deck-next[data-deck="'+unit+'"]'),
+        full=document.querySelector('.deck-full[data-deck="'+unit+'"]'),
+        ext=document.querySelector('.deck-ext[data-ext="'+unit+'"]');
+    if(prev) prev.addEventListener("click",function(){ go(-1); });
+    if(next) next.addEventListener("click",function(){ go(1); });
+    if(full) full.addEventListener("click",function(){ openOv(unit,i); });
+    if(ext) ext.addEventListener("click",function(){ var e=$("ext-"+unit); if(!e) return; var showIt=(e.style.display==="none"); e.style.display=showIt?"":"none"; ext.textContent=showIt?"－ 收合外部講義":"＋ 外部講義"; });
+    render();
+  });
+})();
+</script>
+</body>
+</html>
