@@ -414,6 +414,32 @@
   .qtimer.warn{color:#fff;background:var(--fail);border-color:var(--fail)}
 
   @media print{ .subbar,footer,.home-entry,.seg{display:none!important} }
+
+  /* ===== self-study guidance + resume + quick-check + hint ===== */
+  .guide{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:16px;padding:14px 16px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px}
+  .guide .g-col{flex:1;min-width:240px}
+  .guide h4{margin:0 0 6px;font-size:14px;color:var(--ink)}
+  .guide ul{margin:0;padding-left:18px;font-size:13px;color:var(--muted);line-height:1.75}
+  .timestrip{display:flex;flex-wrap:wrap;gap:6px}
+  .tchip{font:600 12px var(--mono);background:#f1f5fa;border:1px solid var(--line);border-radius:8px;padding:4px 9px;color:var(--ink)}
+  .tchip b{color:var(--hw)}
+  .resume{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;padding:14px 18px;border-radius:14px;background:linear-gradient(135deg,#13312a,#0c2620);color:#fff}
+  .resume .r-txt{flex:1;min-width:220px}
+  .resume .r-txt b{font-size:15px}
+  .resume .r-txt span{display:block;font-size:13px;color:#bcd3cb;margin-top:3px}
+  .qz-opts{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+  .qz-opt{text-align:left;font:inherit;font-size:15px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.22);color:#eef;border-radius:10px;padding:10px 14px;cursor:pointer}
+  .qz-opt:hover{background:rgba(255,255,255,.14)}
+  .qz-opt:disabled{cursor:default}
+  .qz-opt.ok{background:#1f6b46;border-color:#2ea36b;color:#fff}
+  .qz-opt.bad{background:#7a2a26;border-color:#b5453f;color:#fff}
+  .qz-opt.dim{opacity:.5}
+  .qz-fb{margin-top:10px;font-size:13.5px;color:#dfeee9;line-height:1.6}
+  .qz-fb b{color:var(--gold)}
+  .hintrow{display:flex;align-items:flex-start;gap:10px;margin:10px 0}
+  .hint-btn{flex:none}
+  .hintbox{font-size:13px;color:var(--warn);line-height:1.6}
+  .opt.elim{opacity:.4;text-decoration:line-through;pointer-events:none}
   @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -432,6 +458,10 @@
 
 <!-- ===================== 總覽（首頁） ===================== -->
 <section class="view active" id="view-overview">
+  <div class="resume" id="ovResume">
+    <div class="r-txt"><b id="ovResumeTitle">繼續學習</b><span id="ovResumeSub">載入進度中…</span></div>
+    <button class="btn bex" id="ovResumeBtn">開始 →</button>
+  </div>
   <div class="panel" style="margin-bottom:18px">
     <h2 style="color:var(--ink)">課程架構與導覽</h2>
     <p class="lead">平台分為「學習模組」與「評量系統」兩大區。點各項目的「前往」按鈕進入對應子頁；每個子頁皆可一鍵返回首頁。</p>
@@ -502,6 +532,17 @@
     <button class="unit-chip" data-scroll="sim-hw">① 互動模擬</button>
     <button class="unit-chip" data-scroll="lec-hw">② 教學講義</button>
     <button class="unit-chip" data-scroll="quiz-hw">③ 課後評量</button>
+  </div>
+  <div class="guide">
+    <div class="g-col">
+      <h4>本節學習目標</h4>
+      <ul><li>認識硬體五大單元與核心元件（CPU＝CU＋ALU、RAM 揮發性）</li><li>理解開機 POST 與關機程序</li><li>能依徵狀定位故障元件</li></ul>
+    </div>
+    <div class="g-col">
+      <h4>90 分鐘時間分配（建議）</h4>
+      <div class="timestrip"><span class="tchip"><b>10′</b> 暖身前測</span><span class="tchip"><b>20′</b> 互動模擬</span><span class="tchip"><b>20′</b> 教學講義</span><span class="tchip"><b>15′</b> 引導練習</span><span class="tchip"><b>17′</b> 課後評量</span><span class="tchip"><b>8′</b> 反思收尾</span></div>
+      <p style="font-size:12px;color:var(--muted);margin:8px 0 0">自學可自行調整節奏；完成各層後上方標籤會打勾 ✓。</p>
+    </div>
   </div>
   <div class="arow" id="sim-hw" style="margin-bottom:16px">
     <button class="btn power" id="powerBtn">⏻ 開機</button>
@@ -744,6 +785,17 @@
     <button class="unit-chip" data-scroll="lec-sw">② 教學講義</button>
     <button class="unit-chip" data-scroll="quiz-sw">③ 課後評量</button>
   </div>
+  <div class="guide">
+    <div class="g-col">
+      <h4>本節學習目標</h4>
+      <ul><li>說明軟體分層與開機順序（韌體最先）</li><li>理解作業系統與驅動程式的角色</li><li>用 IPO／迴圈／函式描述程式，並能分層排錯</li></ul>
+    </div>
+    <div class="g-col">
+      <h4>90 分鐘時間分配（建議）</h4>
+      <div class="timestrip"><span class="tchip"><b>10′</b> 暖身前測</span><span class="tchip"><b>20′</b> 互動模擬</span><span class="tchip"><b>20′</b> 教學講義</span><span class="tchip"><b>15′</b> 引導練習</span><span class="tchip"><b>17′</b> 課後評量</span><span class="tchip"><b>8′</b> 反思收尾</span></div>
+      <p style="font-size:12px;color:var(--muted);margin:8px 0 0">自學可自行調整節奏；完成各層後上方標籤會打勾 ✓。</p>
+    </div>
+  </div>
   <div class="panel sw" id="sim-sw" style="margin-bottom:18px">
     <h2>軟體的五個子項目（由底層到上層）</h2>
     <p class="lead">軟體不是只有「應用程式」。它由低到高分層，每一層都依賴下一層。</p>
@@ -865,6 +917,17 @@
     <button class="unit-chip" data-scroll="sim-nw">① 互動模擬</button>
     <button class="unit-chip" data-scroll="lec-nw">② 教學講義</button>
     <button class="unit-chip" data-scroll="quiz-nw">③ 課後評量</button>
+  </div>
+  <div class="guide">
+    <div class="g-col">
+      <h4>本節學習目標</h4>
+      <ul><li>認識連線四要素（IP／遮罩／閘道／DNS）</li><li>理解 DNS、資料路徑與 IoT／行動網路／MQTT</li><li>能定位連線故障（區網/外網、DNS）</li></ul>
+    </div>
+    <div class="g-col">
+      <h4>90 分鐘時間分配（建議）</h4>
+      <div class="timestrip"><span class="tchip"><b>10′</b> 暖身前測</span><span class="tchip"><b>20′</b> 互動模擬</span><span class="tchip"><b>20′</b> 教學講義</span><span class="tchip"><b>15′</b> 引導練習</span><span class="tchip"><b>17′</b> 課後評量</span><span class="tchip"><b>8′</b> 反思收尾</span></div>
+      <p style="font-size:12px;color:var(--muted);margin:8px 0 0">自學可自行調整節奏；完成各層後上方標籤會打勾 ✓。</p>
+    </div>
   </div>
   <div class="panel nw" id="sim-nw" style="margin-bottom:18px">
     <h2>網路的六個子項目</h2>
@@ -1017,6 +1080,7 @@
       <div class="qmeta"><span id="qIdx">第 1 / 10 題</span><span class="qcat hw" id="qCatBadge">硬體</span><span class="ctbadge" id="qCTBadge">拆解</span><span class="lvbadge" id="qLvBadge">基礎</span><span class="spacer"></span><span id="qScoreNow">目前 0 分</span></div>
       <p class="qstem" id="qStem">—</p>
       <div class="opts" id="qOpts"></div>
+      <div class="hintrow"><button class="btn hint-btn" id="qHint">💡 提示</button><span class="hintbox" id="qHintBox"></span></div>
       <div class="confwrap" id="qConfWrap">
         <span class="conf-lab">先思考·把握度</span>
         <label class="conf-chip"><input type="radio" name="qconf" value="3"> 很有把握</label>
@@ -1192,6 +1256,7 @@ function delay(ms){ return REDUCE?100:ms; }
     tabs.forEach(function(t){ t.classList.toggle("active", t.getAttribute("data-view")===view); });
     document.querySelectorAll(".view").forEach(function(v){ v.classList.toggle("active", v.id==="view-"+view); });
     window.scrollTo({top:0,behavior:REDUCE?"auto":"smooth"});
+    if(view==="overview" && window.ccResume) ccResume.render();
   }
   tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.getAttribute("data-view")); }); });
   document.querySelectorAll("[data-goto]").forEach(function(p){
@@ -1822,28 +1887,28 @@ function makeTrouble(mountId, bank){
 (function assessment(){
   /* cat: hw/sw/nw ; ct: de拆解 pa模式 ab抽象 al演算 ; lv: 1基礎 2進階 */
   var BANK=[
-    {cat:"hw",ct:"de",lv:1,stem:"開機 POST 自我測試若偵測不到、會發出嗶聲中止的是哪個元件？",opts:["印表機","記憶體 RAM","喇叭","網路卡"],ans:1,exp:"RAM 是開機必需的核心元件，偵測失敗會以嗶聲示警並中止開機。"},
-    {cat:"hw",ct:"ab",lv:1,stem:"關機前要先把 RAM 內容寫回儲存體，原因是？",opts:["RAM 斷電就清空","RAM 比硬碟慢","硬碟會發熱","CPU 需要休息"],ans:0,exp:"RAM 是揮發性記憶體，斷電即清空，所以資料要先存回永久性的儲存體。"},
-    {cat:"hw",ct:"de",lv:2,stem:"主機運轉正常，螢幕卻顯示「無訊號」，最可能缺少？",opts:["作業系統","顯示卡或螢幕線","DNS","防毒軟體"],ans:1,exp:"主機有運轉代表核心元件正常，問題出在畫面輸出：顯示卡或螢幕連接。"},
-    {cat:"hw",ct:"ab",lv:1,stem:"下列何者屬於『輸入』裝置？",opts:["螢幕","喇叭","鍵盤","印表機"],ans:2,exp:"鍵盤把資料送進電腦屬輸入；螢幕、喇叭、印表機都是輸出裝置。"},
-    {cat:"hw",ct:"al",lv:2,stem:"CPU 處理一道指令的週期順序是？",opts:["執行→解碼→提取","提取→解碼→執行","解碼→提取→執行","提取→執行→解碼"],ans:1,exp:"指令週期為 提取(Fetch)→解碼(Decode)→執行(Execute)，循環進行。"},
-    {cat:"hw",ct:"al",lv:2,stem:"二進位 1011 換成十進位是多少？",opts:["9","11","13","15"],ans:1,exp:"1×8 + 0×4 + 1×2 + 1×1 = 11。"},
-    {cat:"hw",ct:"ab",lv:1,stem:"1 Byte（位元組）等於幾個 bit（位元）？",opts:["2","4","8","16"],ans:2,exp:"1 Byte = 8 bit，是資料量的基本單位。"},
-    {cat:"sw",ct:"al",lv:2,stem:"電腦開機時，下列軟體最先執行的是？",opts:["應用程式","作業系統","韌體 BIOS/UEFI","防毒軟體"],ans:2,exp:"韌體內建於主機板，是開機時最先執行、負責喚醒硬體的軟體。"},
-    {cat:"sw",ct:"de",lv:1,stem:"新印表機接上卻印不出來，最可能缺少？",opts:["IP 位址","驅動程式","顯示卡","子網路遮罩"],ans:1,exp:"作業系統要靠驅動程式才認得特定硬體，缺驅動裝置就不會運作。"},
-    {cat:"sw",ct:"al",lv:2,stem:"軟體分層由低到高，正確順序是？",opts:["應用→OS→韌體","韌體→OS→驅動→應用","OS→韌體→應用","驅動→應用→OS"],ans:1,exp:"由底層往上：韌體 → 作業系統 → 驅動程式 → 應用程式，每層依賴下層。"},
-    {cat:"sw",ct:"ab",lv:1,stem:"作業系統最主要的角色是？",opts:["畫圖","管理硬體與所有程式","上網","發電"],ans:1,exp:"OS 是『總管』，負責管理硬體、檔案、記憶體與所有程式的運作。"},
-    {cat:"sw",ct:"ab",lv:1,stem:"在 IPO 模型中，鍵盤 input() 取得的資料屬於哪一段？",opts:["Input 輸入","Process 處理","Output 輸出","Storage 儲存"],ans:0,exp:"IPO ＝ 輸入 → 處理 → 輸出；input() 取得資料屬於 Input 階段。"},
-    {cat:"sw",ct:"al",lv:1,stem:"要重複印出 1 到 5，最適合用哪種程式結構？",opts:["條件判斷 if","迴圈 loop","函式 def","匯入 import"],ans:1,exp:"重複性的工作用迴圈最合適，例如 for 由 1 跑到 5。"},
-    {cat:"sw",ct:"ab",lv:2,stem:"把重複出現的程式碼包成一個函式，主要對應運算思維的哪一項？",opts:["拆解","模式辨識","抽象化","除錯"],ans:2,exp:"把細節封裝、只保留可重用的介面，就是抽象化。"},
-    {cat:"nw",ct:"ab",lv:1,stem:"把網址（如 google.com）翻譯成 IP 位址的是？",opts:["DNS","CPU","RAM","印表機"],ans:0,exp:"DNS 像網路電話簿，把人看得懂的網域名稱解析成 IP 位址。"},
-    {cat:"nw",ct:"de",lv:2,stem:"可以連區網印表機卻不能上網，最可能問題在？",opts:["螢幕","預設閘道／路由器","鍵盤","喇叭"],ans:1,exp:"區網通、外網不通，代表『出口』有問題——預設閘道或對外線路。"},
-    {cat:"nw",ct:"ab",lv:1,stem:"IP 位址在網路中的角色相當於？",opts:["電源","門牌位址","螢幕","風扇"],ans:1,exp:"IP 位址是電腦在網路上的門牌，讓資料知道要送到哪一台。"},
-    {cat:"nw",ct:"de",lv:2,stem:"用 IP 能 ping 通、但網址打不開，最可能是？",opts:["硬碟壞","DNS 故障","CPU 過熱","螢幕沒電"],ans:1,exp:"IP 通、網域不通，差別就在解析這一步，也就是 DNS 出了問題。"},
-    {cat:"nw",ct:"ab",lv:2,stem:"物聯網常用的 MQTT，採用的通訊模型是？",opts:["發布／訂閱 (Pub/Sub)","主從輪詢","廣播風暴","單向廣播"],ans:0,exp:"MQTT 以 發布(Publish)／訂閱(Subscribe) 模型透過 Broker 轉送訊息，適合即時、低頻寬的物聯網傳輸。"},
-    {cat:"nw",ct:"pa",lv:1,stem:"感測器資料上雲常用的輕量文字交換格式是？",opts:["JSON","MP4","EXE","ZIP"],ans:0,exp:"JSON 結構清楚、輕量易讀，常用於感測資料與 API 之間的資料交換。"},
-    {cat:"nw",ct:"de",lv:1,stem:"物聯網三層架構中，溫溼度感測器屬於哪一層？",opts:["感知層","網路層","應用層","電源層"],ans:0,exp:"感測器負責蒐集環境資料，屬於最底層的感知層。"},
-    {cat:"nw",ct:"ab",lv:1,stem:"4G／5G 行動網路主要提供的能力是？",opts:["行動裝置的無線即時連網與傳輸","讓電腦變快","儲存檔案","產生電力"],ans:0,exp:"行動網路讓裝置不需固定線路也能即時上網與傳資料，是物聯網行動傳輸的基礎。"}
+    {cat:"hw",ct:"de",lv:1,hint:"開機必需、缺了會發出嗶聲中止的核心元件。",stem:"開機 POST 自我測試若偵測不到、會發出嗶聲中止的是哪個元件？",opts:["印表機","記憶體 RAM","喇叭","網路卡"],ans:1,exp:"RAM 是開機必需的核心元件，偵測失敗會以嗶聲示警並中止開機。"},
+    {cat:"hw",ct:"ab",lv:1,hint:"哪一種記憶體斷電就清空？",stem:"關機前要先把 RAM 內容寫回儲存體，原因是？",opts:["RAM 斷電就清空","RAM 比硬碟慢","硬碟會發熱","CPU 需要休息"],ans:0,exp:"RAM 是揮發性記憶體，斷電即清空，所以資料要先存回永久性的儲存體。"},
+    {cat:"hw",ct:"de",lv:2,hint:"主機有運轉代表核心正常，問題出在『畫面輸出』那一段。",stem:"主機運轉正常，螢幕卻顯示「無訊號」，最可能缺少？",opts:["作業系統","顯示卡或螢幕線","DNS","防毒軟體"],ans:1,exp:"主機有運轉代表核心元件正常，問題出在畫面輸出：顯示卡或螢幕連接。"},
+    {cat:"hw",ct:"ab",lv:1,hint:"哪一個是把資料『送進』電腦的裝置？",stem:"下列何者屬於『輸入』裝置？",opts:["螢幕","喇叭","鍵盤","印表機"],ans:2,exp:"鍵盤把資料送進電腦屬輸入；螢幕、喇叭、印表機都是輸出裝置。"},
+    {cat:"hw",ct:"al",lv:2,hint:"要先拿到指令，才能看懂、再動作。",stem:"CPU 處理一道指令的週期順序是？",opts:["執行→解碼→提取","提取→解碼→執行","解碼→提取→執行","提取→執行→解碼"],ans:1,exp:"指令週期為 提取(Fetch)→解碼(Decode)→執行(Execute)，循環進行。"},
+    {cat:"hw",ct:"al",lv:2,hint:"由右到左的位值是 1、2、4、8。",stem:"二進位 1011 換成十進位是多少？",opts:["9","11","13","15"],ans:1,exp:"1×8 + 0×4 + 1×2 + 1×1 = 11。"},
+    {cat:"hw",ct:"ab",lv:1,hint:"想想位元組與位元（bit）的換算關係。",stem:"1 Byte（位元組）等於幾個 bit（位元）？",opts:["2","4","8","16"],ans:2,exp:"1 Byte = 8 bit，是資料量的基本單位。"},
+    {cat:"sw",ct:"al",lv:2,hint:"在作業系統之前、內建在主機板上的是誰？",stem:"電腦開機時，下列軟體最先執行的是？",opts:["應用程式","作業系統","韌體 BIOS/UEFI","防毒軟體"],ans:2,exp:"韌體內建於主機板，是開機時最先執行、負責喚醒硬體的軟體。"},
+    {cat:"sw",ct:"de",lv:1,hint:"作業系統要靠什麼，才『認得』特定硬體？",stem:"新印表機接上卻印不出來，最可能缺少？",opts:["IP 位址","驅動程式","顯示卡","子網路遮罩"],ans:1,exp:"作業系統要靠驅動程式才認得特定硬體，缺驅動裝置就不會運作。"},
+    {cat:"sw",ct:"al",lv:2,hint:"從最底層（最接近硬體）往上排。",stem:"軟體分層由低到高，正確順序是？",opts:["應用→OS→韌體","韌體→OS→驅動→應用","OS→韌體→應用","驅動→應用→OS"],ans:1,exp:"由底層往上：韌體 → 作業系統 → 驅動程式 → 應用程式，每層依賴下層。"},
+    {cat:"sw",ct:"ab",lv:1,hint:"誰負責管理硬體、檔案與所有程式？",stem:"作業系統最主要的角色是？",opts:["畫圖","管理硬體與所有程式","上網","發電"],ans:1,exp:"OS 是『總管』，負責管理硬體、檔案、記憶體與所有程式的運作。"},
+    {cat:"sw",ct:"ab",lv:1,hint:"input() 是『取得資料』還是『輸出結果』？",stem:"在 IPO 模型中，鍵盤 input() 取得的資料屬於哪一段？",opts:["Input 輸入","Process 處理","Output 輸出","Storage 儲存"],ans:0,exp:"IPO ＝ 輸入 → 處理 → 輸出；input() 取得資料屬於 Input 階段。"},
+    {cat:"sw",ct:"al",lv:1,hint:"重複做同一件事，用哪種結構最省？",stem:"要重複印出 1 到 5，最適合用哪種程式結構？",opts:["條件判斷 if","迴圈 loop","函式 def","匯入 import"],ans:1,exp:"重複性的工作用迴圈最合適，例如 for 由 1 跑到 5。"},
+    {cat:"sw",ct:"ab",lv:2,hint:"重複做同一件事，用哪種結構最省？",stem:"把重複出現的程式碼包成一個函式，主要對應運算思維的哪一項？",opts:["拆解","模式辨識","抽象化","除錯"],ans:2,exp:"把細節封裝、只保留可重用的介面，就是抽象化。"},
+    {cat:"nw",ct:"ab",lv:1,hint:"誰負責把『網址』翻成『IP』？",stem:"把網址（如 google.com）翻譯成 IP 位址的是？",opts:["DNS","CPU","RAM","印表機"],ans:0,exp:"DNS 像網路電話簿，把人看得懂的網域名稱解析成 IP 位址。"},
+    {cat:"nw",ct:"de",lv:2,hint:"作業系統要靠什麼，才『認得』特定硬體？",stem:"可以連區網印表機卻不能上網，最可能問題在？",opts:["螢幕","預設閘道／路由器","鍵盤","喇叭"],ans:1,exp:"區網通、外網不通，代表『出口』有問題——預設閘道或對外線路。"},
+    {cat:"nw",ct:"ab",lv:1,hint:"網路上用什麼來標示一台電腦的位置？",stem:"IP 位址在網路中的角色相當於？",opts:["電源","門牌位址","螢幕","風扇"],ans:1,exp:"IP 位址是電腦在網路上的門牌，讓資料知道要送到哪一台。"},
+    {cat:"nw",ct:"de",lv:2,hint:"IP 能通代表線路 OK，差別在『名稱解析』那一步。",stem:"用 IP 能 ping 通、但網址打不開，最可能是？",opts:["硬碟壞","DNS 故障","CPU 過熱","螢幕沒電"],ans:1,exp:"IP 通、網域不通，差別就在解析這一步，也就是 DNS 出了問題。"},
+    {cat:"nw",ct:"ab",lv:2,hint:"物聯網常用『發布／訂閱』的訊息模型。",stem:"物聯網常用的 MQTT，採用的通訊模型是？",opts:["發布／訂閱 (Pub/Sub)","主從輪詢","廣播風暴","單向廣播"],ans:0,exp:"MQTT 以 發布(Publish)／訂閱(Subscribe) 模型透過 Broker 轉送訊息，適合即時、低頻寬的物聯網傳輸。"},
+    {cat:"nw",ct:"pa",lv:1,hint:"一種輕量、結構清楚、易讀的文字資料格式。",stem:"感測器資料上雲常用的輕量文字交換格式是？",opts:["JSON","MP4","EXE","ZIP"],ans:0,exp:"JSON 結構清楚、輕量易讀，常用於感測資料與 API 之間的資料交換。"},
+    {cat:"nw",ct:"de",lv:1,hint:"感測器位於三層架構的最底層。",stem:"物聯網三層架構中，溫溼度感測器屬於哪一層？",opts:["感知層","網路層","應用層","電源層"],ans:0,exp:"感測器負責蒐集環境資料，屬於最底層的感知層。"},
+    {cat:"nw",ct:"ab",lv:1,hint:"讓行動裝置不靠固定線路也能即時上網。",stem:"4G／5G 行動網路主要提供的能力是？",opts:["行動裝置的無線即時連網與傳輸","讓電腦變快","儲存檔案","產生電力"],ans:0,exp:"行動網路讓裝置不需固定線路也能即時上網與傳資料，是物聯網行動傳輸的基礎。"}
   ];
   var CATNAME={hw:"硬體",sw:"軟體",nw:"網路"};
   var CTNAME={de:"拆解",pa:"模式",ab:"抽象",al:"演算"};
@@ -1893,9 +1958,20 @@ function makeTrouble(mountId, bank){
     $("qConfWrap").classList.add("show");
     $("qExplain").className="explain"; $("qExplain").innerHTML="";
     $("qVerify").style.display=""; $("qVerify").disabled=true; $("qNext").style.display="none";
+    hintLv=0; $("qHintBox").textContent=""; $("qHint").disabled=false; $("qHint").style.display="";
   }
   $("qOpts").addEventListener("change", updateVerify);
   $("qConfWrap").addEventListener("change", updateVerify);
+  var hintLv=0;
+  $("qHint").addEventListener("click", function(){
+    var q=quiz[idx]; if(!q) return;
+    if(hintLv===0){ $("qHintBox").textContent="💡 "+(q.hint||"先回到這個概念的定義，再逐一判斷選項。"); hintLv=1; }
+    else if(hintLv===1){
+      var opts=[].slice.call($("qOpts").querySelectorAll(".opt"));
+      for(var i=0;i<opts.length;i++){ var oi=parseInt(opts[i].getAttribute("data-i"),10); if(oi!==q.ans && !opts[i].classList.contains("elim")){ opts[i].classList.add("elim"); var inp=opts[i].querySelector("input"); if(inp) inp.disabled=true; break; } }
+      $("qHintBox").textContent="💡 "+(q.hint||"")+"（已刪去一個錯誤選項）"; hintLv=2; $("qHint").disabled=true;
+    }
+  });
 
   $("qVerify").addEventListener("click", function(){
     if(locked) return; locked=true;
@@ -1919,6 +1995,7 @@ function makeTrouble(mountId, bank){
     exp.innerHTML=(right?"<b>✔ 答對！</b> ":"<b>✘ 答錯。</b> 正解：<b>"+q.opts[q.ans]+"</b>。")+q.exp+'<div style="margin-top:6px;color:var(--warn)"><b>把握度回饋：</b>'+cnote+'</div>';
     $("qConfWrap").classList.remove("show");
     $("qVerify").style.display="none";
+    $("qHint").disabled=true;
     $("qNext").style.display=""; $("qNext").textContent=(idx<quiz.length-1?"下一題 →":"看成績 →");
   });
   $("qNext").addEventListener("click", function(){ if(idx<quiz.length-1){ idx++; renderQ(); } else finish(); });
@@ -2270,7 +2347,7 @@ function makeTrouble(mountId, bank){
 })();
 
 /* ============================================================
-   10) 內建教學講義（由單元內容生成．約 20 張．與課後評量高度對應）
+   10) 內建教學講義（由單元內容生成．約 20 張．含隨堂小測．與課後評量高度對應）
 ============================================================ */
 (function decks(){
   var REF={
@@ -2285,6 +2362,7 @@ function makeTrouble(mountId, bank){
       {k:"基本組成",t:"硬體*五大單元*",pts:["輸入單元、輸出單元、記憶體","控制單元（CU）、算術邏輯單元（ALU）","*CPU ＝ CU ＋ ALU*，負責控制與運算"]},
       {k:"輸入／輸出",t:"分清*輸入*與*輸出*裝置",pts:["輸入：*鍵盤*、滑鼠、感測器（把資料送進電腦）","輸出：螢幕、喇叭、印表機（把結果送出）","考點：*鍵盤屬於輸入裝置*"]},
       {k:"CPU",t:"CPU 指令週期",pts:["一道指令的處理順序：","*提取 Fetch → 解碼 Decode → 執行 Execute*","循環不斷進行"]},
+      {check:1,k:"隨堂小測",t:"開機時偵測不到、會發出嗶聲中止的是？",opts:["印表機","記憶體 RAM","喇叭","網路卡"],ans:1,exp:"RAM 是開機必需的核心元件。"},
       {k:"記憶體階層",t:"速度與容量的取捨",pts:["暫存器 → 快取 → 主記憶體（RAM）→ 儲存體","越上層越快、越貴、容量越小"]},
       {k:"RAM",t:"主記憶體 RAM 的關鍵特性",pts:["*RAM 是揮發性記憶體，斷電即清空*","執行中的程式與資料放在 RAM","所以資料要及時存回儲存體"]},
       {k:"儲存體",t:"永久保存資料",pts:["SSD／HDD：*斷電後資料仍在*","RAM 快但揮發、儲存體慢但永久","兩者分工合作"]},
@@ -2296,6 +2374,7 @@ function makeTrouble(mountId, bank){
       {k:"開機程序",t:"按下電源後（POST）",pts:["通電 → *韌體 POST 自我測試*","偵測核心元件是否正常","通過後載入作業系統，畫面出現"]},
       {k:"開機失敗",t:"POST 偵測不到核心元件",pts:["*缺 RAM 會發出嗶聲示警並中止開機*","嗶聲是重要的診斷線索","先檢查 RAM、電源是否插好"]},
       {k:"關機程序",t:"為什麼不能直接拔電",pts:["因為 *RAM 揮發、斷電即清空*","*關機前先把資料寫回儲存體*、結束程式","再安全斷電，避免資料遺失"]},
+      {check:1,k:"隨堂小測",t:"主機有運轉、螢幕卻無訊號，最可能缺？",opts:["作業系統","顯示卡或螢幕線","DNS","防毒軟體"],ans:1,exp:"問題出在畫面輸出環節。"},
       {k:"故障診斷",t:"徵狀 → 缺哪個元件",pts:["螢幕無訊號 → *顯示卡／螢幕線*","不能開機、嗶聲 → *RAM／電源*","找不到作業系統 → *儲存體或未裝 OS*"]},
       {k:"動手做",t:"接著到「① 互動模擬」",pts:["安裝元件、體驗開機 POST 與關機","拔除元件前*先預測、再驗證*徵狀","完成後做「③ 單元課後評量」"]},
       {k:"參考資料",t:"延伸閱讀與參考",pts:["對照課後評量題目，複習本單元*紅字重點*","教科書 ＋ 模擬器 ＋ 影音，課後自學更扎實"],ref:REF.hw}
@@ -2308,12 +2387,14 @@ function makeTrouble(mountId, bank){
       {k:"開機順序",t:"誰最先執行？",pts:["*開機時最先執行的是韌體（BIOS/UEFI）*","內建於主機板，負責喚醒硬體","再把控制權交給作業系統"]},
       {k:"作業系統",t:"OS 是系統的「總管」",pts:["*作業系統管理硬體、檔案、記憶體與所有程式*","協調資源、提供操作介面","常見：Windows／Linux／macOS"]},
       {k:"驅動程式",t:"讓 OS 認得特定硬體",pts:["*作業系統靠驅動程式才聽得懂裝置*","考點：*印表機印不出，最可能缺驅動程式*","新硬體常需安裝對應驅動"]},
+      {check:1,k:"隨堂小測",t:"新印表機接上卻印不出，最可能缺？",opts:["IP 位址","驅動程式","顯示卡","子網路遮罩"],ans:1,exp:"OS 要靠驅動程式才認得硬體。"},
       {k:"應用層",t:"應用程式與公用程式",pts:["應用程式：完成使用者任務（文書、瀏覽器…）","公用程式：防毒、磁碟清理等維護工具"]},
       {k:"程式設計",t:"程式 ＝ 一連串指令",pts:["把要做的事，拆成電腦能執行的步驟","這就是寫程式的本質"]},
       {k:"IPO 模型",t:"輸入 → 處理 → 輸出",pts:["程式運作的基本模型","*鍵盤 input() 取得的資料屬於 Input（輸入）*","處理後再 Output 輸出結果"]},
       {k:"控制結構",t:"三種基本結構",pts:["循序、選擇（if）、重複（迴圈）","用來組織程式的邏輯流程"]},
       {k:"迴圈",t:"重複的事交給迴圈",pts:["考點：*要重複印出 1 到 5，最適合用迴圈*","例如 for 由 1 跑到 5","避免一行行重複地寫"]},
       {k:"函式與抽象化",t:"把重複程式包成函式",pts:["重複出現的程式 → 包成*函式*重複使用","只保留可重用介面、隱藏細節","這對應運算思維的*抽象化*"]},
+      {check:1,k:"隨堂小測",t:"把重複出現的程式包成函式，屬 CT 哪一項？",opts:["拆解","模式辨識","抽象化","除錯"],ans:2,exp:"封裝細節、保留介面＝抽象化。"},
       {k:"運算思維",t:"CT 四構面",pts:["拆解、模式辨識、*抽象化*、演算法","軟體設計處處用到 CT"]},
       {k:"故障排除",t:"哪一層沒裝／沒起來？",pts:["由低到高檢查：韌體 → OS → 驅動 → 應用","裝置接上卻不動 → 多半缺*驅動程式*","開不了機 → 韌體／OS 問題"]},
       {k:"動手做",t:"接著到「① 互動模擬」",pts:["依*正確順序*分層安裝軟體","觀察缺某一層時系統的反應","完成後做「③ 單元課後評量」"]},
@@ -2330,10 +2411,12 @@ function makeTrouble(mountId, bank){
       {k:"資料路徑",t:"封包怎麼送出去（雙向）",pts:["本機 → 交換器／路由器 → 預設閘道","→ 網際網路 → 目的地","再*原路回應*回來"]},
       {k:"主從模型",t:"用戶端 — 伺服器",pts:["用戶端發出請求、伺服器回應","資料以*封包*分段傳送"]},
       {k:"DNS 解析",t:"輸入網址後發生什麼",pts:["輸入網址 → 先問 DNS → 取得 IP → 連線","考點：*IP 能 ping 通、網址打不開 → DNS 故障*"]},
+      {check:1,k:"隨堂小測",t:"IP 能 ping 通、網址卻打不開，最可能？",opts:["硬碟壞","DNS 故障","CPU 過熱","螢幕沒電"],ans:1,exp:"差在『名稱解析』那一步。"},
       {k:"物聯網 IoT",t:"三層架構",pts:["*感知層（感測器）* → 網路層 → 應用層","考點：*溫溼度感測器屬於感知層*"]},
       {k:"資料格式",t:"感測資料常用格式",pts:["*感測資料上雲常用 JSON*（輕量、易讀）","結構清楚，方便 API 交換"]},
       {k:"行動網路",t:"4G／5G 的角色",pts:["*4G/5G 提供行動裝置無線即時連網與傳輸*","是物聯網行動傳輸的基礎"]},
       {k:"MQTT",t:"物聯網即時傳輸協定",pts:["*MQTT 採發布／訂閱（Pub/Sub）模型*","透過 Broker 轉送訊息","適合即時、低頻寬的 IoT"]},
+      {check:1,k:"隨堂小測",t:"MQTT 採用哪一種通訊模型？",opts:["發布／訂閱 (Pub/Sub)","主從輪詢","廣播風暴","單向廣播"],ans:0,exp:"透過 Broker 轉送，適合 IoT。"},
       {k:"端管雲",t:"資料流：感測 → 雲端",pts:["感測（IoT）→ 行動傳輸（4G/5G・MQTT）","→ 雲端（資料庫）→ AI 分析／呈現"]},
       {k:"故障定位",t:"通與不通怎麼判讀",pts:["完全不通 → 網路卡／IP 設定","*區網通、外網不通 → 預設閘道／對外線路*","IP 通、網址不開 → *DNS*"]},
       {k:"連線測試",t:"怎麼檢查",pts:["ping：測試是否連得到","逐項檢查 IP／遮罩／閘道／DNS 是否正確"]},
@@ -2344,16 +2427,31 @@ function makeTrouble(mountId, bank){
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
   function escAttr(s){ return esc(s).replace(/"/g,"&quot;"); }
   function fmt(t){ return esc(t).replace(/\*([^*]+)\*/g,'<span class="hl">$1</span>'); }
-  function refHTML(r){ if(!r||!r.length) return ""; return '<div class="ds-ref"><b>📚 參考：</b>'+r.map(function(x){ return x.url? '<a href="'+escAttr(x.url)+'" target="_blank" rel="noopener">'+esc(x.label)+'</a>' : esc(x.label); }).join("　·　")+'</div>'; }
+  function refHTML(r){ if(!r||!r.length) return ""; return '<div class="ds-ref"><b>\U0001F4DA 參考：</b>'+r.map(function(x){ return x.url? '<a href="'+escAttr(x.url)+'" target="_blank" rel="noopener">'+esc(x.label)+'</a>' : esc(x.label); }).join("\u3000\u00B7\u3000")+'</div>'; }
   function slideHTML(s){
+    var head='<div class="ds-kicker">'+esc(s.k||"")+'</div><h3 class="ds-title">'+fmt(s.t)+'</h3>';
+    if(s.check){
+      var btns=s.opts.map(function(o,idx){ return '<button class="qz-opt" data-i="'+idx+'">'+esc(o)+'</button>'; }).join("");
+      return head+'<div class="qz-opts">'+btns+'</div><div class="qz-fb">先思考再作答，點選看看。</div>';
+    }
     var lis=(s.pts||[]).map(function(p){ return "<li>"+fmt(p)+"</li>"; }).join("");
-    return '<div class="ds-kicker">'+esc(s.k||"")+'</div><h3 class="ds-title">'+fmt(s.t)+'</h3><ul class="ds-pts">'+lis+'</ul>'+refHTML(s.ref);
+    return head+'<ul class="ds-pts">'+lis+'</ul>'+refHTML(s.ref);
+  }
+  function wireCheck(container,s){
+    if(!s.check) return;
+    var opts=[].slice.call(container.querySelectorAll(".qz-opt")), fb=container.querySelector(".qz-fb");
+    opts.forEach(function(b){ b.addEventListener("click", function(){
+      if(b.disabled) return;
+      var pick=parseInt(b.getAttribute("data-i"),10), right=(pick===s.ans);
+      opts.forEach(function(o,i){ o.disabled=true; if(i===s.ans)o.classList.add("ok"); else if(i===pick)o.classList.add("bad"); else o.classList.add("dim"); });
+      fb.innerHTML=(right?'<b>\u2714 \u7b54\u5c0d\uff01</b> ':'<b>\u2718 \u518d\u60f3\u60f3\u3002</b> \u6b63\u89e3\uff1a'+esc(s.opts[s.ans])+'\u3002 ')+esc(s.exp||"");
+    }); });
   }
   var ov=document.createElement("div"); ov.className="deck-ov";
-  ov.innerHTML='<div class="dov-stage" id="dovStage"></div><div class="dov-bar"><button class="btn" id="dovPrev">◀ 上一張</button><span class="dov-pos" id="dovPos"></span><button class="btn" id="dovNext">下一張 ▶</button><span class="spacer"></span><button class="btn" id="dovClose">✕ 結束簡報（Esc）</button></div>';
+  ov.innerHTML='<div class="dov-stage" id="dovStage"></div><div class="dov-bar"><button class="btn" id="dovPrev">\u25C0 \u4e0a\u4e00\u5f35</button><span class="dov-pos" id="dovPos"></span><button class="btn" id="dovNext">\u4e0b\u4e00\u5f35 \u25B6</button><span class="spacer"></span><button class="btn" id="dovClose">\u2715 \u7d50\u675f\u7c21\u5831\uff08Esc\uff09</button></div>';
   document.body.appendChild(ov);
   var dovStage=ov.querySelector("#dovStage"), dovPos=ov.querySelector("#dovPos"), ovUnit=null, ovIdx=0;
-  function renderOv(){ var d=DATA[ovUnit]; dovStage.innerHTML=slideHTML(d[ovIdx]); dovPos.textContent=(ovIdx+1)+" / "+d.length; }
+  function renderOv(){ var d=DATA[ovUnit]; dovStage.innerHTML=slideHTML(d[ovIdx]); wireCheck(dovStage,d[ovIdx]); dovPos.textContent=(ovIdx+1)+" / "+d.length; }
   function onKey(e){ if(e.key==="Escape")closeOv(); else if(e.key==="ArrowRight"||e.key===" "){ ovIdx=Math.min(DATA[ovUnit].length-1,ovIdx+1); renderOv(); } else if(e.key==="ArrowLeft"){ ovIdx=Math.max(0,ovIdx-1); renderOv(); } }
   function openOv(unit,idx){ ovUnit=unit; ovIdx=idx||0; renderOv(); ov.classList.add("show"); document.addEventListener("keydown",onKey); }
   function closeOv(){ ov.classList.remove("show"); document.removeEventListener("keydown",onKey); }
@@ -2363,7 +2461,7 @@ function makeTrouble(mountId, bank){
   Object.keys(DATA).forEach(function(unit){
     var stage=$("deck-"+unit), pos=$("dpos-"+unit); if(!stage) return;
     var slides=DATA[unit], i=0;
-    function render(){ var s=slides[i]; stage.className="deck"+(s.cover?" cover":""); stage.innerHTML=slideHTML(s); if(pos) pos.textContent=(i+1)+" / "+slides.length; if(i===slides.length-1 && window.ccProg) ccProg.mark(unit,"lec"); }
+    function render(){ var s=slides[i]; stage.className="deck"+(s.cover?" cover":""); stage.innerHTML=slideHTML(s); wireCheck(stage,s); if(pos) pos.textContent=(i+1)+" / "+slides.length; if(i===slides.length-1 && window.ccProg) ccProg.mark(unit,"lec"); }
     function go(d){ i=Math.max(0,Math.min(slides.length-1,i+d)); render(); }
     var prev=document.querySelector('.deck-prev[data-deck="'+unit+'"]'),
         next=document.querySelector('.deck-next[data-deck="'+unit+'"]'),
@@ -2372,9 +2470,30 @@ function makeTrouble(mountId, bank){
     if(prev) prev.addEventListener("click",function(){ go(-1); });
     if(next) next.addEventListener("click",function(){ go(1); });
     if(full) full.addEventListener("click",function(){ openOv(unit,i); });
-    if(ext) ext.addEventListener("click",function(){ var e=$("ext-"+unit); if(!e) return; var showIt=(e.style.display==="none"); e.style.display=showIt?"":"none"; ext.textContent=showIt?"－ 收合外部講義":"＋ 外部講義"; });
+    if(ext) ext.addEventListener("click",function(){ var e=$("ext-"+unit); if(!e) return; var showIt=(e.style.display==="none"); e.style.display=showIt?"":"none"; ext.textContent=showIt?"\uFF0D \u6536\u5408\u5916\u90E8\u8B1B\u7FA9":"\uFF0B \u5916\u90E8\u8B1B\u7FA9"; });
     render();
   });
+})();
+
+/* ============================================================
+   11) 續學入口（首頁：依進度建議下一步）
+============================================================ */
+(function resume(){
+  var ORDER=[["hw","sim"],["hw","lec"],["hw","quiz"],["sw","sim"],["sw","lec"],["sw","quiz"],["nw","sim"],["nw","lec"],["nw","quiz"]];
+  var UNAME={hw:"硬體",sw:"軟體",nw:"網路"}, SNAME={sim:"① 互動模擬",lec:"② 教學講義",quiz:"③ 課後評量"};
+  function st(){ try{ var s=localStorage.getItem("cc_progress_v1"); return s?JSON.parse(s):{}; }catch(e){ return {}; } }
+  function render(){
+    var title=$("ovResumeTitle"), sub=$("ovResumeSub"), btn=$("ovResumeBtn"); if(!title) return;
+    var s=st(), done=0, nx=null;
+    ORDER.forEach(function(o){ if(s[o[0]]&&s[o[0]][o[1]]) done++; else if(!nx) nx=o; });
+    if(!nx){ title.textContent="\U0001F389 全部完成！"; sub.textContent="已完成 9/9 個學習步驟，可複習講義或重做課後評量。"; btn.textContent="回課程架構"; btn.onclick=function(){ window.scrollTo({top:0,behavior:REDUCE?"auto":"smooth"}); }; return; }
+    title.textContent = done===0?"開始學習":("繼續學習（已完成 "+done+"/9）");
+    sub.textContent = "建議下一步：前往「"+UNAME[nx[0]]+"」的 "+SNAME[nx[1]];
+    btn.textContent = "前往 "+UNAME[nx[0]]+" →";
+    btn.onclick=function(){ var view=(nx[0]==="hw"?"hardware":nx[0]==="sw"?"software":"network"); if(window.__show) window.__show(view); setTimeout(function(){ var el=document.getElementById(nx[1]+"-"+nx[0]); if(el) el.scrollIntoView({behavior:REDUCE?"auto":"smooth",block:"start"}); },80); };
+  }
+  window.ccResume={render:render};
+  render();
 })();
 </script>
 </body>
