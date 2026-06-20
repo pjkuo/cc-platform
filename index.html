@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- 雲端彙整：教師可在此填入 Google Apps Script 網址，全班即自動上傳；留空則僅本機。 -->
+<meta name="cc-cloud-url" content="https://script.google.com/macros/s/AKfycbxZlAT7lrBdsowJwsjDUuqAkJko2JANWOtKFvTVrK4J9SbmW5-fdLp5LR5Oa5OsWnCXuw/exec" />
 <title>計算機概論模擬平台｜硬體・軟體・網路</title>
 <style>
   :root{
@@ -1351,6 +1353,13 @@
           <span class="spacer"></span>
           <button class="btn" id="qstClear" style="border-color:var(--fail);color:var(--fail)">清除所有紀錄</button>
         </div>
+        <div class="arow" style="margin-top:8px;align-items:center">
+          <span class="ctrl-lab">雲端彙整</span>
+          <input id="qstCloudUrl" type="text" placeholder="貼上 Google Apps Script 網址（教師設定一次，跨裝置共用）" style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px">
+          <button class="btn" id="qstCloudSave">儲存</button>
+          <button class="btn primary" id="qstCloudLoad">☁ 載入全班（雲端）</button>
+          <span id="qstCloudMsg" style="font-size:12.5px;color:var(--muted)"></span>
+        </div>
       </div>
       <div id="qstEmpty" class="panel" style="display:none;color:var(--muted)">目前尚無紀錄。請至「學生作答」完成一次即時評量。</div>
       <div id="qstBody">
@@ -1460,6 +1469,13 @@
         <button class="btn" id="stCsv">⬇ 匯出全部成績（CSV）</button>
         <span class="spacer"></span>
         <button class="btn" id="stClear" style="border-color:var(--fail);color:var(--fail)">清除所有紀錄</button>
+      </div>
+      <div class="arow" style="margin-top:8px;align-items:center">
+        <span class="ctrl-lab">雲端彙整</span>
+        <input id="exCloudUrl" type="text" placeholder="貼上 Google Apps Script 網址（教師設定一次，跨裝置共用）" style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px">
+        <button class="btn" id="exCloudSave">儲存</button>
+        <button class="btn primary" id="exCloudLoad">☁ 載入全班（雲端）</button>
+        <span id="exCloudMsg" style="font-size:12.5px;color:var(--muted)"></span>
       </div>
     </div>
     <div id="stEmpty" class="panel" style="display:none;color:var(--muted)">目前尚無紀錄。請至「學生測驗」完成一次課後評量。</div>
@@ -2132,6 +2148,30 @@ function makeTrouble(mountId, bank){
 /* ============================================================
    6) 即時評量系統（先思考後驗證）
 ============================================================ */
+/* ============================================================
+   6b) 雲端同步（選用）：把成績送到教師的 Google Sheets / Apps Script
+============================================================ */
+(function(){
+  var KEY="cc_cloud_url";
+  function metaUrl(){ try{ var m=document.querySelector('meta[name="cc-cloud-url"]'); return (m&&m.getAttribute("content"))||""; }catch(e){ return ""; } }
+  function getUrl(){ try{ var u=localStorage.getItem(KEY); if(u) return u; }catch(e){} return metaUrl(); }
+  function setUrl(u){ try{ localStorage.setItem(KEY, u||""); }catch(e){} }
+  function push(rec){ var u=getUrl(); if(!u||!window.fetch) return; try{ fetch(u,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(rec)}); }catch(e){} }
+  var seq=0;
+  function fetchAll(kind, cb){
+    var u=getUrl(); if(!u){ cb(null,"尚未設定雲端網址"); return; }
+    var name="__ccld"+(++seq), done=false;
+    var s=document.createElement("script");
+    function cleanup(){ try{ delete window[name]; }catch(e){ window[name]=undefined; } if(s&&s.parentNode) s.parentNode.removeChild(s); }
+    window[name]=function(data){ done=true; try{ cb((data&&data.length!==undefined)?data:[],null); }catch(e){} cleanup(); };
+    s.onerror=function(){ if(!done){ cb(null,"連線失敗，請確認網址與部署權限"); cleanup(); } };
+    var sep=u.indexOf("?")>=0?"&":"?";
+    s.src=u+sep+"action=all&kind="+encodeURIComponent(kind)+"&callback="+name+"&_="+Date.now();
+    document.body.appendChild(s);
+    setTimeout(function(){ if(!done){ cb(null,"逾時，請確認網址與部署為『任何人皆可存取』"); cleanup(); } },12000);
+  }
+  window.CCLOUD={getUrl:getUrl,setUrl:setUrl,push:push,fetchAll:fetchAll};
+})();
 (function assessment(){
   /* cat: hw/sw/nw ; ct: de拆解 pa模式 ab抽象 al演算 ; lv: 1基礎 2進階 */
   var BANK=[
@@ -2313,11 +2353,11 @@ function makeTrouble(mountId, bank){
   try{ localStorage.setItem("__ccq","1"); localStorage.removeItem("__ccq"); }catch(e){ qMemMode=true; }
   function qload(){ if(qMemMode) return qMem; try{ var s=localStorage.getItem(QSTKEY); return s?JSON.parse(s):[]; }catch(e){ qMemMode=true; return qMem; } }
   function qpersist(a){ if(qMemMode){ qMem=a; return; } try{ localStorage.setItem(QSTKEY,JSON.stringify(a)); }catch(e){ qMemMode=true; qMem=a; } }
-  function qadd(r){ var a=qload(); a.push(r); qpersist(a); }
+  function qadd(r){ var a=qload(); a.push(r); qpersist(a); if(window.CCLOUD){ var c={}; for(var k in r){ if(r.hasOwnProperty(k)) c[k]=r[k]; } c.kind="quiz"; c.grade=qGrade(r.score); CCLOUD.push(c); } }
   var lastScope="all", lastLevel="all";
   var QPW="npust1728", qAuthed=false;
   function qGate(){
-    if(qAuthed){ $("qstLock").style.display="none"; $("qstContent").style.display="block"; renderQuizStats(); }
+    if(qAuthed){ $("qstLock").style.display="none"; $("qstContent").style.display="block"; qCloudPrefill(); renderQuizStats(); }
     else { $("qstLock").style.display="block"; $("qstContent").style.display="none"; $("qstPwMsg").classList.remove("show"); var p=$("qstPw"); if(p){ p.value=""; try{p.focus();}catch(e){} } }
   }
   function qSeg(seg){
@@ -2338,7 +2378,7 @@ function makeTrouble(mountId, bank){
   function qGrade(s){ return s>=90?"優秀":(s>=75?"良好":(s>=60?"及格":"待加強")); }
   function qItemAgg(recs){ var m={}; recs.forEach(function(r){ (r.items||[]).forEach(function(it){ var k=it.stem; if(!m[k]) m[k]={stem:it.stem,cat:it.cat,ct:it.ct,c:0,t:0}; m[k].t++; if(it.right) m[k].c++; }); }); return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){ return (a.c/a.t)-(b.c/b.t); }); }
   function renderQuizStats(){
-    var recs=qload(), has=recs.length>0;
+    var recs=qload().concat(quizCloud||[]), has=recs.length>0;
     $("qstEmpty").style.display=has?"none":"block"; $("qstBody").style.display=has?"block":"none";
     if(!has) return;
     var n=recs.length, scores=recs.map(function(r){return r.score;});
@@ -2358,6 +2398,11 @@ function makeTrouble(mountId, bank){
     var rows=recs.slice().sort(function(a,b){return b.ts-a.ts;}).map(function(r){ return '<tr><td>'+qFmtTime(r.ts)+'</td><td>'+qScope(r.scope)+'</td><td>'+qLevel(r.level)+'</td><td>'+r.count+'</td><td class="sc">'+r.score+'</td><td>'+qGrade(r.score)+'</td></tr>'; }).join("");
     $("qstTable").innerHTML='<thead><tr><th>時間</th><th>範圍</th><th>難度</th><th>題數</th><th>分數</th><th>等第</th></tr></thead><tbody>'+rows+'</tbody>';
   }
+  var quizCloud=[];
+  function qCloudMsg(m){ var el=$("qstCloudMsg"); if(el) el.textContent=m||""; }
+  function qCloudPrefill(){ var i=$("qstCloudUrl"); if(i&&window.CCLOUD) i.value=CCLOUD.getUrl(); }
+  if($("qstCloudSave")) $("qstCloudSave").addEventListener("click", function(){ if(window.CCLOUD){ CCLOUD.setUrl(($("qstCloudUrl").value||"").trim()); qCloudMsg("已儲存雲端網址（本機）。"); } });
+  if($("qstCloudLoad")) $("qstCloudLoad").addEventListener("click", function(){ if(!window.CCLOUD) return; qCloudMsg("載入中…"); CCLOUD.fetchAll("quiz", function(data,err){ if(err){ qCloudMsg("✗ "+err); return; } quizCloud=data||[]; qCloudMsg("✔ 已載入雲端 "+quizCloud.length+" 筆，併入統計。"); renderQuizStats(); }); });
   $("qstRefresh").addEventListener("click", renderQuizStats);
   $("qstClear").addEventListener("click", function(){ if(confirm("確定清除本機所有隨堂評量紀錄？此動作無法復原。")){ qpersist([]); renderQuizStats(); } });
   $("qstCsv").addEventListener("click", function(){
@@ -2394,7 +2439,7 @@ function makeTrouble(mountId, bank){
   try{ localStorage.setItem("__cc_t","1"); localStorage.removeItem("__cc_t"); }catch(e){ memMode=true; }
   function load(){ if(memMode) return mem; try{ var s=localStorage.getItem(STKEY); return s?JSON.parse(s):[]; }catch(e){ memMode=true; return mem; } }
   function persist(a){ if(memMode){ mem=a; return; } try{ localStorage.setItem(STKEY,JSON.stringify(a)); }catch(e){ memMode=true; mem=a; } }
-  function addRecord(r){ var a=load(); a.push(r); persist(a); }
+  function addRecord(r){ var a=load(); a.push(r); persist(a); if(window.CCLOUD){ var c={}; for(var k in r){ if(r.hasOwnProperty(k)) c[k]=r[k]; } c.kind="exam"; CCLOUD.push(c); } }
 
   /* ---- 分頁切換 ---- */
   [].slice.call(document.querySelectorAll("#examSeg .segbtn")).forEach(function(b){
@@ -2410,7 +2455,7 @@ function makeTrouble(mountId, bank){
   /* ---- 教師統計密碼閘 ---- */
   var TEACHER_PW="npust1728", authed=false;
   function gateStats(){
-    if(authed){ $("stLock").style.display="none"; $("stContent").style.display="block"; renderStats(); }
+    if(authed){ $("stLock").style.display="none"; $("stContent").style.display="block"; exCloudPrefill(); renderStats(); }
     else { $("stLock").style.display="block"; $("stContent").style.display="none"; $("stPwMsg").classList.remove("show"); var p=$("stPw"); if(p){ p.value=""; try{ p.focus(); }catch(e){} } }
   }
   $("stEnter").addEventListener("click", function(){
@@ -2548,7 +2593,7 @@ function makeTrouble(mountId, bank){
   function esc(s){ s=s==null?"":String(s); return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
   function card(v,k){ return '<div class="statcard"><div class="v">'+v+'</div><div class="k">'+k+'</div></div>'; }
   function renderStats(){
-    var recs=load(), has=recs.length>0;
+    var recs=load().concat(examCloud||[]), has=recs.length>0;
     $("stEmpty").style.display=has?"none":"block"; $("stBody").style.display=has?"block":"none";
     if(!has) return;
     var n=recs.length, scores=recs.map(function(r){return r.score;});
@@ -2569,6 +2614,11 @@ function makeTrouble(mountId, bank){
   }
   $("stRefresh").addEventListener("click", renderStats);
   $("stClear").addEventListener("click", function(){ if(confirm("確定清除本機所有課後評量紀錄？此動作無法復原。")){ persist([]); renderStats(); } });
+  var examCloud=[];
+  function exCloudMsg(m){ var el=$("exCloudMsg"); if(el) el.textContent=m||""; }
+  function exCloudPrefill(){ var i=$("exCloudUrl"); if(i&&window.CCLOUD) i.value=CCLOUD.getUrl(); }
+  if($("exCloudSave")) $("exCloudSave").addEventListener("click", function(){ if(window.CCLOUD){ CCLOUD.setUrl(($("exCloudUrl").value||"").trim()); exCloudMsg("已儲存雲端網址（本機）。"); } });
+  if($("exCloudLoad")) $("exCloudLoad").addEventListener("click", function(){ if(!window.CCLOUD) return; exCloudMsg("載入中…"); CCLOUD.fetchAll("exam", function(data,err){ if(err){ exCloudMsg("✗ "+err); return; } examCloud=data||[]; exCloudMsg("✔ 已載入雲端 "+examCloud.length+" 筆，併入統計。"); renderStats(); }); });
   $("stCsv").addEventListener("click", function(){
     var recs=load(); if(!recs.length)return;
     var head=["時間","姓名","學號","班級","範圍","難度","題數","分數","等第","用時","硬體答對","硬體題數","軟體答對","軟體題數","網路答對","網路題數"];
