@@ -1259,6 +1259,11 @@
 <!-- ===================== 即時評量 ===================== -->
 <section class="view" id="view-assess">
   <div class="subbar"><button class="btn back" data-back>← 返回首頁</button><span class="crumb">✓ 即時評量</span></div>
+  <div class="seg" id="quizSeg">
+    <button class="segbtn active" data-qseg="student">學生作答</button>
+    <button class="segbtn" data-qseg="stats">統計分析（教師）</button>
+  </div>
+  <div id="quizStudent">
   <div class="panel" style="margin-bottom:18px">
     <h2 style="color:var(--ink)">即時評量系統</h2>
     <p class="lead">三大主軸混合出題，每題對應運算思維（CT）四構面與難度。採「先思考後驗證」：先選答案、再標<b>把握度</b>，按驗證當場顯示對錯與解析；結束後給總分、各主軸與 CT 構面表現、把握度校準與錯題回顧，並可匯出作答紀錄。</p>
@@ -1325,6 +1330,40 @@
       </div>
     </div>
   </div>
+  </div><!-- /quizStudent -->
+  <div id="quizStats" style="display:none">
+    <div class="panel" id="qstLock" style="margin-bottom:18px">
+      <h2 style="color:var(--ink)">統計分析（教師）· 需要密碼</h2>
+      <p class="lead">此區為教師專用，輸入密碼後檢視全班隨堂評量的作答統計與逐題答對率（難易度分析）。</p>
+      <div class="arow">
+        <input id="qstPw" type="password" style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:14px;max-width:240px" placeholder="教師密碼" autocomplete="off">
+        <button class="btn primary" id="qstEnter">進入</button>
+        <span id="qstPwMsg" class="warnmsg" style="margin-top:0"></span>
+      </div>
+    </div>
+    <div id="qstContent" style="display:none">
+      <div class="panel" style="margin-bottom:18px">
+        <h2 style="color:var(--ink)">統計分析（教師）</h2>
+        <p class="lead">彙整本機（瀏覽器）已完成的隨堂評量；含分數分布、主軸與 CT 答對率，以及每一題的答對率分析。紀錄存於 localStorage，可匯出 CSV 或清除。</p>
+        <div class="arow">
+          <button class="btn" id="qstRefresh">↻ 重新整理</button>
+          <button class="btn" id="qstCsv">⬇ 匯出逐題統計（CSV）</button>
+          <span class="spacer"></span>
+          <button class="btn" id="qstClear" style="border-color:var(--fail);color:var(--fail)">清除所有紀錄</button>
+        </div>
+      </div>
+      <div id="qstEmpty" class="panel" style="display:none;color:var(--muted)">目前尚無紀錄。請至「學生作答」完成一次即時評量。</div>
+      <div id="qstBody">
+        <div class="statcards" id="qstCards"></div>
+        <div class="grid g2" style="margin-top:18px">
+          <div class="panel"><h2 style="color:var(--ink)">分數分布</h2><div id="qstHist" class="hist"></div></div>
+          <div class="panel"><h2 style="color:var(--ink)">主軸・CT 平均答對率</h2><div class="catbars" id="qstCat"></div><div class="catbars" id="qstCT" style="margin-top:10px"></div></div>
+        </div>
+        <div class="panel" style="margin-top:18px"><h2 style="color:var(--ink)">逐題答對率（難易度分析・由低到高）</h2><div class="tablewrap"><table class="rtable" id="qstItems"></table></div></div>
+        <div class="panel" style="margin-top:18px"><h2 style="color:var(--ink)">作答紀錄</h2><div class="tablewrap"><table class="rtable" id="qstTable"></table></div></div>
+      </div>
+    </div>
+  </div>
 </section>
 <!--SW_NW_ASSESS-->
 
@@ -1341,7 +1380,7 @@
   <div id="examStudent">
     <div class="panel" id="exLogin" style="margin-bottom:18px">
       <h2 style="color:var(--ink)">課後評量・開始測驗</h2>
-      <p class="lead">輸入身分後作答，成績與把握度會自動記錄供教師統計。採「先思考後驗證」，作答後可複習錯題；勾選「複習模式」則為不計分練習。本測驗<b>限時約 30 分鐘</b>，時間到自動交卷。</p>
+      <p class="lead">輸入身分後作答，成績與把握度會自動記錄供教師統計。採「先思考後驗證」，作答後可複習錯題；勾選「複習模式」則為不計分練習。作答時間可由教師設定（預設 30 分鐘，可改 10／20／不限時），<b>時間到自動交卷並評分</b>。</p>
       <div class="formgrid">
         <label class="fld"><span>姓名 ＊</span><input id="exName" type="text" placeholder="王小明"></label>
         <label class="fld"><span>學號 ＊</span><input id="exId" type="text" placeholder="411xxxxx"></label>
@@ -1361,6 +1400,8 @@
         <label class="chk"><input type="radio" name="exlevel" value="2"> 進階</label>
         <span class="ctrl-lab" style="margin-left:10px">題數</span>
         <select id="exCount" class="qsel"><option value="5">5 題</option><option value="10" selected>10 題</option><option value="0">全部</option></select>
+        <span class="ctrl-lab" style="margin-left:10px">作答時間</span>
+        <select id="exTime" class="qsel"><option value="10">10 分</option><option value="20">20 分</option><option value="30" selected>30 分</option><option value="0">不限時</option></select>
         <label class="chk" style="margin-left:10px"><input type="checkbox" id="exReview"> 複習模式（不計入統計）</label>
         <span class="spacer"></span>
         <button class="btn primary" id="exStart">開始測驗</button>
@@ -2135,6 +2176,7 @@ function makeTrouble(mountId, bank){
   function start(){
     var cat=document.querySelector('input[name="qcat"]:checked').value;
     var lvSel=document.querySelector('input[name="qlevel"]:checked').value;
+    lastScope=cat; lastLevel=lvSel;
     var cnt=parseInt($("qCount").value,10);
     var pool=BANK.filter(function(q){
       return (cat==="all"||q.cat===cat) && (lvSel==="all"||String(q.lv)===lvSel);
@@ -2241,6 +2283,7 @@ function makeTrouble(mountId, bank){
       return '<div class="ri"><div class="rq">第 '+r.n+' 題（'+CATNAME[r.cat]+'·CT '+CTNAME[r.ct]+'）'+r.stem+'</div>'+
         '<div class="ra">你的選擇：<span class="x">'+r.pick+'</span>　正解：<span class="o">'+r.correct+'</span></div></div>';
     }).join("") : '<div class="empty">✔ 全部答對，沒有錯題！</div>';
+    try{ qadd({ts:Date.now(),scope:lastScope,level:lastLevel,count:quiz.length,score:score,cat:catStat,ct:ctStat,calib:calib,items:history.map(function(r){return {stem:r.stem,cat:r.cat,ct:r.ct,right:r.right};})}); }catch(e){}
   }
 
   function csvCell(s){ return '"'+String(s).replace(/"/g,'""')+'"'; }
@@ -2265,10 +2308,71 @@ function makeTrouble(mountId, bank){
   $("qExportCsv").addEventListener("click", exportCsv);
   $("qPrint").addEventListener("click", function(){ window.print(); });
 
+  /* ===== 隨堂評量・教師統計（localStorage 記錄 + 逐題分析） ===== */
+  var QSTKEY="cc_quiz_records_v1", qMem=[], qMemMode=false;
+  try{ localStorage.setItem("__ccq","1"); localStorage.removeItem("__ccq"); }catch(e){ qMemMode=true; }
+  function qload(){ if(qMemMode) return qMem; try{ var s=localStorage.getItem(QSTKEY); return s?JSON.parse(s):[]; }catch(e){ qMemMode=true; return qMem; } }
+  function qpersist(a){ if(qMemMode){ qMem=a; return; } try{ localStorage.setItem(QSTKEY,JSON.stringify(a)); }catch(e){ qMemMode=true; qMem=a; } }
+  function qadd(r){ var a=qload(); a.push(r); qpersist(a); }
+  var lastScope="all", lastLevel="all";
+  var QPW="npust1728", qAuthed=false;
+  function qGate(){
+    if(qAuthed){ $("qstLock").style.display="none"; $("qstContent").style.display="block"; renderQuizStats(); }
+    else { $("qstLock").style.display="block"; $("qstContent").style.display="none"; $("qstPwMsg").classList.remove("show"); var p=$("qstPw"); if(p){ p.value=""; try{p.focus();}catch(e){} } }
+  }
+  function qSeg(seg){
+    [].slice.call(document.querySelectorAll("#quizSeg .segbtn")).forEach(function(x){ x.classList.toggle("active", x.getAttribute("data-qseg")===seg); });
+    $("quizStudent").style.display = seg==="student"?"":"none";
+    $("quizStats").style.display = seg==="stats"?"":"none";
+    if(seg==="stats") qGate();
+  }
+  [].slice.call(document.querySelectorAll("#quizSeg .segbtn")).forEach(function(b){ b.addEventListener("click", function(){ qSeg(b.getAttribute("data-qseg")); }); });
+  $("qstEnter").addEventListener("click", function(){ if(($("qstPw").value||"")===QPW){ qAuthed=true; qGate(); } else { $("qstPwMsg").textContent="密碼錯誤，請再試一次。"; $("qstPwMsg").classList.add("show"); } });
+  $("qstPw").addEventListener("keydown", function(e){ if(e.key==="Enter"||e.keyCode===13){ $("qstEnter").click(); } });
+  function pad2(n){ return (n<10?"0":"")+n; }
+  function qFmtTime(ts){ var d=new Date(ts); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate())+" "+pad2(d.getHours())+":"+pad2(d.getMinutes()); }
+  function qEsc(s){ s=s==null?"":String(s); return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function qCard(v,k){ return '<div class="statcard"><div class="v">'+v+'</div><div class="k">'+k+'</div></div>'; }
+  function qScope(s){ return s==="all"?"綜合":(CATNAME[s]||s); }
+  function qLevel(l){ return l==="all"?"全部":(LVNAME[l]||l); }
+  function qGrade(s){ return s>=90?"優秀":(s>=75?"良好":(s>=60?"及格":"待加強")); }
+  function qItemAgg(recs){ var m={}; recs.forEach(function(r){ (r.items||[]).forEach(function(it){ var k=it.stem; if(!m[k]) m[k]={stem:it.stem,cat:it.cat,ct:it.ct,c:0,t:0}; m[k].t++; if(it.right) m[k].c++; }); }); return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){ return (a.c/a.t)-(b.c/b.t); }); }
+  function renderQuizStats(){
+    var recs=qload(), has=recs.length>0;
+    $("qstEmpty").style.display=has?"none":"block"; $("qstBody").style.display=has?"block":"none";
+    if(!has) return;
+    var n=recs.length, scores=recs.map(function(r){return r.score;});
+    var avg=Math.round(scores.reduce(function(a,b){return a+b;},0)/n), max=Math.max.apply(null,scores), min=Math.min.apply(null,scores);
+    var pass=recs.filter(function(r){return r.score>=60;}).length, totalItems=0; recs.forEach(function(r){ totalItems+=(r.items?r.items.length:0); });
+    $("qstCards").innerHTML=qCard(n,"作答次數")+qCard(avg,"平均分")+qCard(max,"最高分")+qCard(min,"最低分")+qCard(Math.round(pass/n*100)+"%","及格率")+qCard(totalItems,"總作答題數");
+    var bk=[["90–100",0],["80–89",0],["70–79",0],["60–69",0],["0–59",0]];
+    recs.forEach(function(r){ var s=r.score; if(s>=90)bk[0][1]++; else if(s>=80)bk[1][1]++; else if(s>=70)bk[2][1]++; else if(s>=60)bk[3][1]++; else bk[4][1]++; });
+    var mx=Math.max(1,Math.max.apply(null,bk.map(function(b){return b[1];})));
+    $("qstHist").innerHTML=bk.map(function(b){ return '<div class="hbar"><span class="hl">'+b[0]+'</span><span class="ht"><i style="width:'+Math.round(b[1]/mx*100)+'%"></i></span><span class="hn">'+b[1]+'</span></div>'; }).join("");
+    var cAgg={hw:{c:0,t:0},sw:{c:0,t:0},nw:{c:0,t:0}}, tAgg={de:{c:0,t:0},pa:{c:0,t:0},ab:{c:0,t:0},al:{c:0,t:0}};
+    recs.forEach(function(r){ ["hw","sw","nw"].forEach(function(k){ if(r.cat&&r.cat[k]){cAgg[k].c+=r.cat[k].c;cAgg[k].t+=r.cat[k].t;} }); ["de","pa","ab","al"].forEach(function(k){ if(r.ct&&r.ct[k]){tAgg[k].c+=r.ct[k].c;tAgg[k].t+=r.ct[k].t;} }); });
+    $("qstCat").innerHTML=bars(cAgg,CATNAME,""); $("qstCT").innerHTML=bars(tAgg,CTNAME,"ct-");
+    var arr=qItemAgg(recs);
+    var irows=arr.map(function(it){ var p=Math.round(it.c/it.t*100); var col=p<60?"var(--fail)":(p<80?"var(--warn)":"var(--hw)"); return '<tr><td>'+CATNAME[it.cat]+'</td><td>'+CTNAME[it.ct]+'</td><td>'+qEsc(it.stem)+'</td><td class="sc">'+it.c+"/"+it.t+'</td><td style="color:'+col+';font-weight:700">'+p+'%</td></tr>'; }).join("");
+    $("qstItems").innerHTML='<thead><tr><th>主軸</th><th>CT</th><th>題目</th><th>答對/作答</th><th>答對率</th></tr></thead><tbody>'+irows+'</tbody>';
+    var rows=recs.slice().sort(function(a,b){return b.ts-a.ts;}).map(function(r){ return '<tr><td>'+qFmtTime(r.ts)+'</td><td>'+qScope(r.scope)+'</td><td>'+qLevel(r.level)+'</td><td>'+r.count+'</td><td class="sc">'+r.score+'</td><td>'+qGrade(r.score)+'</td></tr>'; }).join("");
+    $("qstTable").innerHTML='<thead><tr><th>時間</th><th>範圍</th><th>難度</th><th>題數</th><th>分數</th><th>等第</th></tr></thead><tbody>'+rows+'</tbody>';
+  }
+  $("qstRefresh").addEventListener("click", renderQuizStats);
+  $("qstClear").addEventListener("click", function(){ if(confirm("確定清除本機所有隨堂評量紀錄？此動作無法復原。")){ qpersist([]); renderQuizStats(); } });
+  $("qstCsv").addEventListener("click", function(){
+    var recs=qload(); if(!recs.length) return; var arr=qItemAgg(recs);
+    var head=["主軸","CT構面","題目","答對","作答","答對率(%)"];
+    var rows=arr.map(function(it){ return [CATNAME[it.cat],CTFULL[it.ct],it.stem,it.c,it.t,Math.round(it.c/it.t*100)].map(csvCell).join(","); });
+    var csv="\uFEFF"+head.map(csvCell).join(",")+"\n"+rows.join("\n")+"\n";
+    var blob=new Blob([csv],{type:"text/csv;charset=utf-8;"}); var a=document.createElement("a"); var ts=new Date().toISOString().slice(0,16).replace(/[:T]/g,"-"); a.href=URL.createObjectURL(blob); a.download="隨堂評量逐題統計_"+ts+".csv"; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(a.href);},1500);
+  });
+
   // 教學↔評量橋接：各子頁面「本主軸速測」
   window.ccStartQuiz=function(cat){
     var r=document.querySelector('input[name="qcat"][value="'+(cat||"all")+'"]'); if(r) r.checked=true;
     if(window.__show) window.__show("assess");
+    if(typeof qSeg==="function") qSeg("student");
     start();
   };
   [].slice.call(document.querySelectorAll("[data-quiz]")).forEach(function(b){
@@ -2340,7 +2444,7 @@ function makeTrouble(mountId, bank){
     $("exMsg").classList.remove("show");
     $("exLogin").style.display="none"; $("exArea").style.display="block"; $("exResult").style.display="none";
     $("exWho").textContent = who.name?("作答者："+who.name):"";
-    if(!reviewMode && !isPractice){ startTimer(); } else { stopTimer(); $("exTimer").style.display="none"; }
+    if(!reviewMode && !isPractice && EXAM_SEC>0){ startTimer(); } else { stopTimer(); $("exTimer").style.display="none"; }
     renderQ();
   }
   function start(){
@@ -2351,6 +2455,7 @@ function makeTrouble(mountId, bank){
     var cat=document.querySelector('input[name="excat"]:checked').value;
     var lv=document.querySelector('input[name="exlevel"]:checked').value;
     var cnt=parseInt($("exCount").value,10);
+    var tmin=parseInt(($("exTime")||{}).value,10); EXAM_SEC=(isNaN(tmin)?30:tmin)*60;
     var pool=bank().filter(function(q){ return (cat==="all"||q.cat===cat)&&(lv==="all"||String(q.lv)===lv); });
     pool.sort(function(){return Math.random()-0.5;});
     if(cnt>0) pool=pool.slice(0,Math.min(pool.length,cnt));
@@ -2397,7 +2502,7 @@ function makeTrouble(mountId, bank){
   function finish(){
     stopTimer();
     $("exProg").style.width="100%"; $("exArea").style.display="none"; $("exResult").style.display="block";
-    var timed=(!reviewMode && !practice);
+    var timed=(!reviewMode && !practice && EXAM_SEC>0);
     var timeUsed = timed ? (EXAM_SEC - Math.max(0,remain)) : null;
     score=Math.min(100,score);
     $("exScore").textContent=score; $("exBar").style.width=score+"%";
