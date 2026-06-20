@@ -2357,7 +2357,7 @@ function makeTrouble(mountId, bank){
   var lastScope="all", lastLevel="all";
   var QPW="npust1728", qAuthed=false;
   function qGate(){
-    if(qAuthed){ $("qstLock").style.display="none"; $("qstContent").style.display="block"; qCloudPrefill(); renderQuizStats(); }
+    if(qAuthed){ $("qstLock").style.display="none"; $("qstContent").style.display="block"; qCloudPrefill(); renderQuizStats(); if(window.CCLOUD&&CCLOUD.getUrl()&&$("qstCloudLoad")) $("qstCloudLoad").click(); }
     else { $("qstLock").style.display="block"; $("qstContent").style.display="none"; $("qstPwMsg").classList.remove("show"); var p=$("qstPw"); if(p){ p.value=""; try{p.focus();}catch(e){} } }
   }
   function qSeg(seg){
@@ -2455,7 +2455,7 @@ function makeTrouble(mountId, bank){
   /* ---- 教師統計密碼閘 ---- */
   var TEACHER_PW="npust1728", authed=false;
   function gateStats(){
-    if(authed){ $("stLock").style.display="none"; $("stContent").style.display="block"; exCloudPrefill(); renderStats(); }
+    if(authed){ $("stLock").style.display="none"; $("stContent").style.display="block"; exCloudPrefill(); renderStats(); if(window.CCLOUD&&CCLOUD.getUrl()&&$("exCloudLoad")) $("exCloudLoad").click(); }
     else { $("stLock").style.display="block"; $("stContent").style.display="none"; $("stPwMsg").classList.remove("show"); var p=$("stPw"); if(p){ p.value=""; try{ p.focus(); }catch(e){} } }
   }
   $("stEnter").addEventListener("click", function(){
