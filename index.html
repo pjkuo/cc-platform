@@ -146,6 +146,13 @@
   .cap .st{flex:none;font-weight:700;width:30px;font-family:var(--mono)}
   .cap .st.ok{color:var(--ok)} .cap .st.no{color:var(--fail)}
   .cap .nm{flex:none;width:104px} .cap .rs{color:var(--muted);font-size:12px} .cap .rs.bad{color:var(--fail)}
+  #caps .cap{align-items:center;padding:7px 6px;border-bottom:1px solid #173127}
+  #caps .cap.ok{border-left:3px solid var(--ok);padding-left:8px}
+  #caps .cap.no{border-left:3px solid var(--fail);padding-left:8px;background:rgba(226,87,76,.10)}
+  #caps .cap .st{width:23px;height:23px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;font-family:var(--sans)}
+  #caps .cap.ok .st{background:var(--ok)} #caps .cap.no .st{background:var(--fail)}
+  #caps .cap .nm{width:auto;min-width:96px;color:#dff1e6;font-weight:600}
+  #caps .cap.ok .rs{color:#9fd9bb;font-weight:600} #caps .cap.no .rs{color:#ffb4ab;font-weight:700}
 
   /* ===== tables ===== */
   table.map{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
@@ -799,7 +806,7 @@
     </div>
     <div class="panel">
       <h2>系統診斷面板</h2>
-      <p class="lead">以目前配置「開機後」能做什麼——綠＝可用，紅＝缺元件。</p>
+      <p class="lead">以目前配置「開機後」能做什麼。看每列左邊的記號：<strong>✓ 可用</strong>、<strong>✕ 缺元件</strong>（不只看顏色）。</p>
       <div class="post" style="min-height:0">
         <div class="ttl">CONFIG · CAPABILITY</div>
         <div id="caps"></div>
@@ -1612,7 +1619,7 @@ function delay(ms){ return REDUCE?100:ms; }
   function evalCaps(s){ var o={}; CAPS.forEach(function(c){ var miss=[]; c.need.forEach(function(k){ var has=(k in s.installed)?s.installed[k]:s.periph[k]; if(!has) miss.push(SHORT[k]); }); o[c.id]={ok:miss.length===0,missing:miss}; }); return o; }
 
   var capsEl=$("caps");
-  function renderCaps(){ var c=evalCaps(state),h=""; CAPS.forEach(function(x){ var r=c[x.id]; h+='<div class="cap"><span class="st '+(r.ok?"ok":"no")+'">'+(r.ok?"OK":"✘")+'</span><span class="nm">'+x.name+'</span><span class="rs '+(r.ok?"":"bad")+'">'+(r.ok?"可用":("缺少："+r.missing.join("、")))+'</span></div>'; }); capsEl.innerHTML=h; }
+  function renderCaps(){ var c=evalCaps(state),h=""; CAPS.forEach(function(x){ var r=c[x.id]; h+='<div class="cap '+(r.ok?"ok":"no")+'"><span class="st" aria-hidden="true">'+(r.ok?"✓":"✕")+'</span><span class="nm">'+x.name+'</span><span class="rs">'+(r.ok?"可用":("缺少："+r.missing.join("、")))+'</span></div>'; }); capsEl.innerHTML=h; }
 
   function setLed(id,color){ var e=$(id); if(e) e.setAttribute("fill",color); }
   function renderDevices(){
@@ -3073,7 +3080,7 @@ function makeTrouble(mountId, bank){
     else { prevB.style.display=""; nextB.style.display=""; quizB.textContent="📝 小測驗"; render(); }
   }
   function onKey(e){ if(e.key==="Escape"){ close(); } else if(mode==="deck"){ if(e.key==="ArrowRight"){ if(idx<cur.slides.length-1){ idx++; render(); } } else if(e.key==="ArrowLeft"){ if(idx>0){ idx--; render(); } } } }
-  function open(key){ cur=SUB[key]; if(!cur) return; curKey=key; idx=0; titleEl.textContent=cur.title; icEl.textContent=cur.ic; icEl.className="sc-ic "+cur.unit; setMode("deck"); modal.classList.add("show"); document.addEventListener("keydown",onKey); }
+  function open(key){ cur=SUB[key]; if(!cur) return; curKey=key; idx=0; titleEl.textContent=cur.title; icEl.textContent=cur.ic; icEl.className="sc-ic "+cur.unit; var _cd=modal.querySelector(".sub-card"); if(_cd) _cd.className="sub-card "+cur.unit; setMode("deck"); modal.classList.add("show"); document.addEventListener("keydown",onKey); }
   function close(){ modal.classList.remove("show"); document.removeEventListener("keydown",onKey); }
   prevB.addEventListener("click",function(){ if(idx>0){ idx--; render(); } });
   nextB.addEventListener("click",function(){ if(idx<cur.slides.length-1){ idx++; render(); } });
@@ -3991,6 +3998,411 @@ function makeTrouble(mountId, bank){
   /* ---- 對外暴露：供「跟著做」引導跨層跟隨 ---- */
   window.CCLAYER={ show:show, setCurrent:setCurrent, revealAll:revealAll, layerOf:layerOf,
     current:function(v){ return STATE[v]?STATE[v].current:0; } };
+})();
+
+
+/* ============================================================
+   21) 行內術語即點即譯（重用 CCGLOSS 27 詞；不離開畫面）
+   把畫面文字中出現的術語（CPU、POST、ping、DNS…）自動加上虛線底線，
+   點一下就地跳出小卡：白話解釋＋生活比喻＋🔊朗讀。專治「英文／抽象弱」。
+============================================================ */
+(function inlineGloss(){
+  if(!window.CCGLOSS || !window.CCGLOSS.terms || !window.CCGLOSS.terms.length) return;
+  var TERMS=window.CCGLOSS.terms;
+
+  /* alias → term 索引，長詞優先（避免 IP 誤切 IPO） */
+  var ALIASES=[];
+  TERMS.forEach(function(T,idx){
+    (T.al||[]).forEach(function(a){ if(a) ALIASES.push({s:a, idx:idx}); });
+  });
+  ALIASES.sort(function(a,b){ return b.s.length-a.s.length; });
+
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  /* ---- 樣式 ---- */
+  var css=""
+   + ".gl-term{border-bottom:1.5px dotted var(--gold,#e0b44a);cursor:help;text-underline-offset:2px}"
+   + ".gl-term:hover{background:rgba(224,180,74,.16);border-radius:3px}"
+   + ".gl-pop{position:fixed;z-index:1600;max-width:min(320px,90vw);background:linear-gradient(135deg,var(--board,#10312a),var(--board2,#0c2620));color:#fff;border:1px solid rgba(255,255,255,.18);border-top:3px solid var(--gold,#e0b44a);border-radius:14px;box-shadow:0 16px 44px rgba(8,22,18,.45);padding:13px 15px 11px;opacity:0;transform:translateY(6px);transition:opacity .16s,transform .16s;pointer-events:none;font-family:var(--sans)}"
+   + ".gl-pop.show{opacity:1;transform:translateY(0);pointer-events:auto}"
+   + ".gl-pop .gp-t{font:800 15px var(--sans);margin-bottom:2px}"
+   + ".gl-pop .gp-en{font:600 12px var(--mono);color:var(--gold,#e0b44a);margin-left:6px}"
+   + ".gl-pop .gp-p{font:500 14px/1.6 var(--sans);color:#e6f1ec;margin-top:4px}"
+   + ".gl-pop .gp-eg{display:inline-block;margin-top:7px;font:700 12.5px var(--sans);background:rgba(224,180,74,.18);color:#ffe6ad;padding:3px 9px;border-radius:999px}"
+   + ".gl-pop .gp-bar{display:flex;gap:8px;margin-top:10px;align-items:center}"
+   + ".gl-pop .gp-spk{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:6px 11px;font:600 12.5px var(--sans);cursor:pointer}"
+   + ".gl-pop .gp-spk:hover{background:rgba(255,255,255,.22)}"
+   + ".gl-pop .gp-x{margin-left:auto;background:none;border:none;color:#cfe0d6;font-size:16px;cursor:pointer;line-height:1}"
+   + ".gl-pop .gp-tip{font:600 11px var(--sans);color:#9fc4b0;margin-top:8px}";
+  var st=document.createElement("style"); st.textContent=css; document.head.appendChild(st);
+
+  /* ---- 不處理的容器（互動元件與系統 UI） ---- */
+  var SKIP_TAGS={SCRIPT:1,STYLE:1,SVG:1,BUTTON:1,INPUT:1,SELECT:1,TEXTAREA:1,OPTION:1,A:1,CODE:1,KBD:1,LABEL:1};
+  var SKIP_CLASS=["gl-term","gl-pop","gl-mini","say","slide-tools","a11y-bar","gbar","lnav","lfoot","subbar","unitnav","deck-ctrl","cc-head","sc-foot","sc-outline"];
+  function skipAncestor(node){
+    var el=node.parentNode;
+    while(el && el.nodeType===1){
+      if(el.namespaceURI==="http://www.w3.org/2000/svg") return true;
+      if(SKIP_TAGS[(el.tagName||"").toUpperCase()]) return true;
+      if(el.classList){ for(var i=0;i<SKIP_CLASS.length;i++){ if(el.classList.contains(SKIP_CLASS[i])) return true; } }
+      if(el.getAttribute && el.getAttribute("data-nogloss")!=null) return true;
+      el=el.parentNode;
+    }
+    return false;
+  }
+
+  function linkTextNode(node){
+    var text=node.nodeValue;
+    if(!text || text.length<2 || !text.trim()) return;
+    var frag=null, i=0, last=0, linked={};
+    while(i<text.length){
+      var m=null, mlen=0;
+      for(var a=0;a<ALIASES.length;a++){
+        var al=ALIASES[a].s;
+        if(linked[ALIASES[a].idx]) continue;
+        if(text.charCodeAt(i)===al.charCodeAt(0) && text.substr(i,al.length)===al){ m=ALIASES[a]; mlen=al.length; break; }
+      }
+      if(m){
+        if(!frag) frag=document.createDocumentFragment();
+        if(i>last) frag.appendChild(document.createTextNode(text.slice(last,i)));
+        var span=document.createElement("span");
+        span.className="gl-term"; span.setAttribute("data-gt",String(m.idx)); span.setAttribute("tabindex","0");
+        span.textContent=text.substr(i,mlen);
+        frag.appendChild(span);
+        linked[m.idx]=1; i+=mlen; last=i;
+      } else i++;
+    }
+    if(frag){
+      if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+      node.parentNode.replaceChild(frag,node);
+    }
+  }
+
+  function linkIn(root){
+    if(!root) return;
+    var walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode:function(n){
+        if(!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        if(skipAncestor(n)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    var nodes=[], n;
+    while((n=walker.nextNode())) nodes.push(n);
+    nodes.forEach(linkTextNode);
+  }
+
+  /* ---- 即點即譯小卡 ---- */
+  var pop=document.createElement("div"); pop.className="gl-pop"; document.body.appendChild(pop);
+  var popOpen=false;
+  function showPop(span){
+    var T=TERMS[Number(span.getAttribute("data-gt"))]; if(!T) return;
+    pop.innerHTML=
+        '<div><span class="gp-t">'+esc(T.t)+'</span>'+(T.en?'<span class="gp-en">'+esc(T.en)+'</span>':'')+'</div>'
+      + '<div class="gp-p">'+esc(T.plain)+'</div>'
+      + (T.eg?'<div class="gp-eg">生活比喻：'+esc(T.eg)+'</div>':'')
+      + '<div class="gp-bar"><button class="gp-spk" type="button">🔊 念給我聽</button><button class="gp-x" type="button" aria-label="關閉">✕</button></div>';
+    pop.style.left="-9999px"; pop.style.top="0"; pop.classList.add("show"); popOpen=true;
+    // 定位：靠近術語、夾在視窗內
+    var r=span.getBoundingClientRect(), pw=pop.offsetWidth, ph=pop.offsetHeight;
+    var left=Math.min(Math.max(8, r.left), window.innerWidth-pw-8);
+    var top=r.bottom+8; if(top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-8);
+    pop.style.left=left+"px"; pop.style.top=top+"px";
+    pop.querySelector(".gp-x").addEventListener("click",hidePop);
+    pop.querySelector(".gp-spk").addEventListener("click",function(){
+      var txt=T.plain+(T.eg?("，就像"+T.eg):"");
+      if(window.CCSPEAK) window.CCSPEAK.speak(txt);
+    });
+  }
+  function hidePop(){ pop.classList.remove("show"); popOpen=false; if(window.CCSPEAK) window.CCSPEAK.stop(); }
+
+  document.addEventListener("click",function(e){
+    var t=e.target.closest && e.target.closest(".gl-term");
+    if(t){ e.stopPropagation(); showPop(t); return; }
+    if(popOpen && !(e.target.closest && e.target.closest(".gl-pop"))) hidePop();
+  });
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape" && popOpen) hidePop();
+    else if((e.key==="Enter"||e.key===" ") && document.activeElement && document.activeElement.classList && document.activeElement.classList.contains("gl-term")){
+      e.preventDefault(); showPop(document.activeElement);
+    }
+  });
+  window.addEventListener("resize",function(){ if(popOpen) hidePop(); });
+  window.addEventListener("scroll",function(){ if(popOpen) hidePop(); }, true);
+
+  /* ---- 初次掃描（靜態閱讀內容）＋對外 relink ---- */
+  function run(){ try{ linkIn(document.body); }catch(e){} }
+  window.CCGLOSS.relink=function(root){ try{ linkIn(root||document.body); }catch(e){} };
+  setTimeout(run,0);
+})();
+
+
+/* ============================================================
+   22) 進度記憶 ＋ 首頁「繼續上次」
+   記住學生上次停在哪個單元、哪一層（分層架構），首頁橫幅一鍵接續。
+   攔截 CCLAYER.show / __show 記錄位置（只記真實導覽，不記初始化）。
+   增強既有的 #ovResume 橫幅：有「上次位置」就顯示繼續上次，否則沿用建議下一步。
+============================================================ */
+(function progressResume(){
+  var UNAME={hw:"硬體",sw:"軟體",nw:"網路"};
+  var LNAME=["認識・目標","互動模擬","教學講義","課後評量"];
+  var ORDER=[["hw","sim"],["hw","lec"],["hw","quiz"],["sw","sim"],["sw","lec"],["sw","quiz"],["nw","sim"],["nw","lec"],["nw","quiz"]];
+  var LAST="cc_last_v1";
+
+  function vUnit(view){ return view==="view-hardware"?"hw":view==="view-software"?"sw":view==="view-network"?"nw":""; }
+  function recordLast(view, layer){
+    var u=vUnit(view); if(!u) return;
+    try{ localStorage.setItem(LAST, JSON.stringify({view:view, layer:(layer|0), u:u, ts:Date.now()})); }catch(e){}
+  }
+  function getLast(){ try{ var s=localStorage.getItem(LAST); return s?JSON.parse(s):null; }catch(e){ return null; } }
+  function countDone(){
+    var s; try{ s=JSON.parse(localStorage.getItem("cc_progress_v1")||"{}"); }catch(e){ s={}; }
+    var d=0; ORDER.forEach(function(o){ if(s[o[0]]&&s[o[0]][o[1]]) d++; }); return d;
+  }
+
+  function $(id){ return document.getElementById(id); }
+
+  function renderLast(){
+    var L=getLast(); if(!L||!UNAME[L.u]) return false;
+    var title=$("ovResumeTitle"), sub=$("ovResumeSub"), btn=$("ovResumeBtn");
+    if(!title||!sub||!btn) return false;
+    var done=countDone();
+    title.textContent = "繼續上次"+(done?("（已完成 "+done+"/9）"):"");
+    sub.textContent = "上次在：「"+UNAME[L.u]+"」的 "+(LNAME[L.layer]||"")+"，按右邊接著上。";
+    btn.textContent = "繼續上次 →";
+    btn.onclick = function(){
+      var key=L.view.replace("view-","");
+      if(window.__show) window.__show(key);
+      setTimeout(function(){ if(window.CCLAYER) window.CCLAYER.show(L.view, L.layer); }, 90);
+    };
+    return true;
+  }
+
+  /* 增強既有 ccResume.render：優先「繼續上次」，否則沿用原本「建議下一步」 */
+  var orig = (window.ccResume && window.ccResume.render) || null;
+  function enhanced(){ if(renderLast()) return; if(orig) orig(); }
+  if(window.ccResume) window.ccResume.render = enhanced; else window.ccResume = {render:enhanced};
+
+  /* 攔截分層切換：只在該單元為「目前顯示」時記錄（排除初始化的 show） */
+  if(window.CCLAYER && window.CCLAYER.show){
+    var _show=window.CCLAYER.show;
+    window.CCLAYER.show=function(v,i){
+      var r=_show(v,i);
+      try{ var el=document.getElementById(v); if(el&&el.classList.contains("active")) recordLast(v,i); }catch(e){}
+      return r;
+    };
+  }
+  /* 攔截單元切換：進入單元記錄；回首頁時刷新橫幅 */
+  if(window.__show){
+    var _sh=window.__show;
+    window.__show=function(k){
+      var r=_sh(k);
+      try{
+        if(k==="hardware"||k==="software"||k==="network"){
+          var v="view-"+k; recordLast(v, window.CCLAYER?window.CCLAYER.current(v):0);
+        } else if(k==="overview"){
+          if(window.ccResume) setTimeout(window.ccResume.render, 0);
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+
+  enhanced();
+})();
+
+/* ============================================================
+   23) 教師工具收進「更多」（學生畫面只剩核心操作）
+   預設＝學生模式：隱藏成績統計分頁、外部講義等進階／教師功能。
+   浮動工具列一顆「教師工具」可切換並記住（localStorage），跨節課保留。
+============================================================ */
+(function teacherTools(){
+  var KEY="cc_teacher_v1";
+  function isTeacher(){ try{ return localStorage.getItem(KEY)==="1"; }catch(e){ return false; } }
+  function apply(){ document.body.classList.toggle("student-mode", !isTeacher()); }
+
+  var css = "body.student-mode #examSeg,"
+          + "body.student-mode #quizSeg,"
+          + "body.student-mode #examStats,"
+          + "body.student-mode #quizStats,"
+          + "body.student-mode .deck-ext,"
+          + "body.student-mode .ext-slides{display:none!important}";
+  var st=document.createElement("style"); st.textContent=css; document.head.appendChild(st);
+  apply();
+
+  var ab=document.querySelector(".a11y-bar");
+  if(ab){
+    var b=document.createElement("button"); b.className="a11y-btn";
+    function lab(){ b.textContent="\uD83D\uDC69\u200D\uD83C\uDFEB 教師工具："+(isTeacher()?"開":"關"); }
+    lab();
+    b.addEventListener("click",function(){
+      var now=!isTeacher();
+      try{ localStorage.setItem(KEY, now?"1":"0"); }catch(e){}
+      apply(); lab();
+      if(now) alert("已開啟教師工具：成績統計、外部講義等進階功能已顯示。再按一次即可收起，回到學生畫面。");
+    });
+    ab.appendChild(b);
+  }
+})();
+
+
+/* ============================================================
+   24) 手機／平板堆疊化 ＋ 觸控放大
+   多數 grid 已會堆疊；這裡補：觸控裝置上放大可點目標、SVG 防溢出、
+   表格可橫向捲動、手機縮小留白。桌機維持原本緊湊樣式（用 pointer:coarse）。
+============================================================ */
+(function responsiveTouch(){
+  var css = ""
+   /* SVG 一律不溢出容器 */
+   + ".view svg{max-width:100%;height:auto}"
+   /* 表格橫向捲動容器（由 JS 包覆） */
+   + ".tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px}"
+   /* 手機：縮小留白、字級微調 */
+   + "@media(max-width:560px){"
+   +   ".wrap{padding-left:12px;padding-right:12px}"
+   +   ".panel{padding:13px 14px}"
+   +   "section.block{margin-top:16px}"
+   +   ".subbar{gap:8px}"
+   +   "table.map{font-size:12.5px} table.map th,table.map td{padding:8px 9px}"
+   + "}"
+   /* 觸控裝置：放大可點目標到 ~44px（不影響滑鼠桌機） */
+   + "@media(pointer:coarse){"
+   +   ".btn{min-height:44px;padding:11px 16px}"
+   +   ".segbtn{min-height:44px}"
+   +   ".unit-chip,.ln-step{min-height:42px}"
+   +   ".sublink{min-height:38px;padding:8px 13px}"
+   +   ".subcard{padding:16px}"
+   +   ".a11y-btn{min-height:40px}"
+   +   ".gb-btn,.lf-btn,.gp-spk{min-height:42px}"
+   +   ".deck-prev,.deck-next,.sub-foot .btn{min-height:44px}"
+   +   ".core-slot,.dev{cursor:pointer}"
+   + "}";
+  var st=document.createElement("style"); st.textContent=css; document.head.appendChild(st);
+
+  /* 把單元內的表格包進可橫捲容器（避免窄螢幕擠壓／溢出） */
+  function wrapTables(){
+    [].slice.call(document.querySelectorAll(".view table")).forEach(function(t){
+      var p=t.parentNode;
+      if(p && p.classList && p.classList.contains("tbl-scroll")) return;
+      var w=document.createElement("div"); w.className="tbl-scroll";
+      p.insertBefore(w,t); w.appendChild(t);
+    });
+  }
+  setTimeout(wrapTables,0);
+})();
+
+/* ============================================================
+   25) 每層「單一主行動」＋「卡住了？」逃生鍵
+   每個單元分層的最上方，明確告訴學生現在只要做的一件事；
+   旁邊一顆「🤔 卡住了？」彈出白話提示，並可一鍵改用「跟著做」帶著走。
+============================================================ */
+(function layerCue(){
+  if(!document.getElementById("view-hardware")||!window.CCLAYER) return;
+
+  var CUE = {
+    "view-hardware":[
+      {act:"點一張卡（CPU／記憶體／儲存體）認識零件。", tip:"三個主角先記住：CPU 是大腦、RAM 是工作桌、儲存體是倉庫。"},
+      {act:"先按「⏻ 開機」，看電腦怎麼醒過來。", tip:"也可以拔掉一個零件再開機，看畫面卡在哪一步。不確定就用「跟著做」帶你。"},
+      {act:"看圖文講義；看不懂的字可放大或按朗讀。", tip:"重點：五大單元、開機 POST、依徵狀找故障元件。"},
+      {act:"按「開始課後評量」作答就好。", tip:"前面每一步都做過了，放輕鬆。卡住就回上一層看講義。"}
+    ],
+    "view-software":[
+      {act:"點一張卡（作業系統／應用程式）認識軟體。", tip:"OS 是餐廳經理、應用程式是各個廚師。"},
+      {act:"照順序把每一層裝上去，再按「啟動測試」。", tip:"順序不能顛倒，少一層就跑不起來。不確定就用「跟著做」。"},
+      {act:"看講義補齊觀念，可放大或朗讀。", tip:"重點：軟體分層、IPO、迴圈與函式。"},
+      {act:"開始課後評量就好。", tip:"前面都練過了，放輕鬆作答。"}
+    ],
+    "view-network":[
+      {act:"點一張卡（有線／無線）認識網路。", tip:"IP 是門牌、閘道是社區大門、DNS 是電話簿。"},
+      {act:"把 IP、遮罩、閘道、DNS 填好，按「連線測試 ping」。", tip:"可按「隨機出題」練習找錯，不通再按「一鍵修正」對照。"},
+      {act:"看講義補齊觀念，可放大或朗讀。", tip:"重點：IP／DNS／閘道、封包一站站的流向。"},
+      {act:"開始課後評量就好。", tip:"前面都練過了，放輕鬆作答。"}
+    ]
+  };
+
+  var css = ""
+   + ".lcue{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-6px 0 16px;padding:11px 14px;background:linear-gradient(135deg,#fffaf0,#fff5e0);border:1px solid #f0dca8;border-left:4px solid var(--gold,#e0b44a);border-radius:12px}"
+   + ".lc-do{flex:1;min-width:180px;font:600 14.5px/1.5 var(--sans);color:#5a4a1e}"
+   + ".lc-do b{color:#946a12;font-weight:800}"
+   + ".lc-stuck{background:#fff;border:1px solid #e6c98c;color:#946a12;border-radius:999px;padding:8px 14px;font:700 13px var(--sans);cursor:pointer;white-space:nowrap;transition:.15s}"
+   + ".lc-stuck:hover{background:#fff3da}"
+   + ".view.guiding .lcue{display:none!important}"
+   + ".lcue-pop{position:fixed;z-index:1600;max-width:min(340px,92vw);background:linear-gradient(135deg,var(--board,#10312a),var(--board2,#0c2620));color:#fff;border:1px solid rgba(255,255,255,.18);border-top:3px solid var(--gold,#e0b44a);border-radius:14px;box-shadow:0 16px 44px rgba(8,22,18,.45);padding:14px 16px 12px;opacity:0;transform:translateY(6px);transition:.16s;pointer-events:none;font-family:var(--sans)}"
+   + ".lcue-pop.show{opacity:1;transform:translateY(0);pointer-events:auto}"
+   + ".lcue-pop .lp-t{font:800 14px var(--sans);color:var(--gold,#e0b44a);margin-bottom:5px}"
+   + ".lcue-pop .lp-p{font:500 14px/1.65 var(--sans);color:#e6f1ec}"
+   + ".lcue-pop .lp-bar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}"
+   + ".lcue-pop .lp-go{background:var(--gold,#e0b44a);color:#1b2733;border:none;border-radius:10px;padding:9px 13px;font:800 13px var(--sans);cursor:pointer}"
+   + ".lcue-pop .lp-x{margin-left:auto;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:9px 12px;font:600 13px var(--sans);cursor:pointer}"
+   + "@media(pointer:coarse){.lc-stuck{min-height:42px}}";
+  var st=document.createElement("style"); st.textContent=css; document.head.appendChild(st);
+
+  /* 逃生小卡（共用） */
+  var pop=document.createElement("div"); pop.className="lcue-pop"; pop.setAttribute("data-nogloss",""); document.body.appendChild(pop);
+  var popOpen=false, popView=null;
+  function showPop(btn, view, tip){
+    popView=view;
+    pop.innerHTML='<div class="lp-t">🤔 卡住了沒關係</div><div class="lp-p">'+tip+'</div>'
+      + '<div class="lp-bar"><button class="lp-go" type="button">🧭 用「跟著做」帶我一步步</button><button class="lp-x" type="button">我先自己試</button></div>';
+    pop.style.left="-9999px"; pop.style.top="0"; pop.classList.add("show"); popOpen=true;
+    var r=btn.getBoundingClientRect(), pw=pop.offsetWidth, ph=pop.offsetHeight;
+    var left=Math.min(Math.max(8, r.right-pw), window.innerWidth-pw-8);
+    var top=r.bottom+8; if(top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-8);
+    pop.style.left=left+"px"; pop.style.top=top+"px";
+    pop.querySelector(".lp-x").addEventListener("click", hidePop);
+    pop.querySelector(".lp-go").addEventListener("click", function(){ hidePop(); if(window.CCGUIDE) window.CCGUIDE.start(popView); });
+  }
+  function hidePop(){ pop.classList.remove("show"); popOpen=false; }
+  document.addEventListener("click", function(e){
+    if(popOpen && !(e.target.closest && (e.target.closest(".lcue-pop")||e.target.closest(".lc-stuck")))) hidePop();
+  });
+
+  /* 各單元插入 cue 列（接在 .lnav 之後） */
+  var BARS={};
+  Object.keys(CUE).forEach(function(vid){
+    var view=document.getElementById(vid); if(!view) return;
+    var nav=view.querySelector(".lnav"); if(!nav) return;
+    var bar=document.createElement("div"); bar.className="lcue"; bar.setAttribute("data-nogloss","");
+    bar.innerHTML='<span class="lc-do"><b>👉 現在做這個：</b><span class="lc-do-txt"></span></span><button class="lc-stuck" type="button">🤔 卡住了？</button>';
+    nav.insertAdjacentElement("afterend", bar);
+    bar.querySelector(".lc-stuck").addEventListener("click", function(){
+      var i=window.CCLAYER.current(vid)|0; var c=(CUE[vid]||[])[i]||{};
+      showPop(this, vid, c.tip||"先別急，照上面那一行做做看；想要的話我可以用「跟著做」一步步帶你。");
+    });
+    BARS[vid]=bar;
+    update(vid, 0);
+  });
+  function update(vid, i){
+    var bar=BARS[vid]; if(!bar) return;
+    var c=(CUE[vid]||[])[i]||{};
+    var t=bar.querySelector(".lc-do-txt"); if(t) t.textContent=c.act||"";
+  }
+
+  /* 跟著分層切換更新 cue */
+  var _show=window.CCLAYER.show;
+  window.CCLAYER.show=function(v,i){
+    var r=_show(v,i);
+    try{ if(BARS[v]) update(v, window.CCLAYER.current(v)); }catch(e){}
+    return r;
+  };
+})();
+
+/* ============================================================
+   26) 大小單元視覺語言統一
+   讓子單元（小單元）模態與分層大單元同一套視覺：單元主色頂條、
+   「下一步」用主色／金色的主行動節奏，與分層列、引導列一致。
+============================================================ */
+(function subUnitUnify(){
+  var css = ""
+   + ".sub-card.hw{--ax:var(--hw)} .sub-card.sw{--ax:var(--sw)} .sub-card.nw{--ax:var(--nw)}"
+   + ".sub-card{border-top:4px solid var(--ax,var(--gold,#e0b44a))}"
+   + ".sub-head .sc-ic{background:var(--ax,var(--hw))}"
+   /* 「下一步」主行動：與 .lf-next／.gb-next 同節奏 */
+   + "#subNext{background:var(--ax,#2e5496);color:#fff;border-color:transparent;font-weight:800}"
+   + "#subNext:hover{filter:brightness(1.07);color:#fff}"
+   + "#subDone{font-weight:800}"
+   + ".sub-pos{font:700 13px var(--sans);color:var(--muted)}";
+  var st=document.createElement("style"); st.textContent=css; document.head.appendChild(st);
 })();
 
 </script>
