@@ -3236,9 +3236,16 @@ function makeTrouble(mountId, bank){
   function unitOf(c){ if(c&&c.src==="lec") return ((window.CCLECTURES&&CCLECTURES[c.id])||{}).unit||"sw"; return c&&c.src==="deck"?c.id:(SUBOF[c&&c.id]||"hw"); }
   function scFinish(){
     var deck=document.getElementById("scDeck"); deck.className="deck cover";
-    var nm={hw:"硬體",sw:"軟體",nw:"網路"}, u=unitOf(SC);
-    deck.innerHTML='<div class="ds-kicker">講授完成</div><h3 class="ds-title">本課程已講授完畢 🎉</h3><p style="color:#dfeee9;font-size:15px;line-height:1.6">接下來用「'+nm[u]+'課後評量」檢核學習成效，或重新聽一次。</p><div class="sc-finish"><button class="btn primary" id="scExam">📝 前往'+nm[u]+'課後評量 →</button><button class="btn" id="scReplay">🔁 重新播放</button></div>';
-    var ex=document.getElementById("scExam"), rp=document.getElementById("scReplay");
+    var nm={hw:"硬體",sw:"軟體",nw:"網路"}, vmap={hw:"hardware",sw:"software",nw:"network"}, u=unitOf(SC);
+    var hasGuide=!!(window.CCGUIDE&&document.getElementById("view-"+(vmap[u]||"")));
+    var gbtn=hasGuide?'<button class="btn primary" id="scGuide">🧭 跟著做：'+nm[u]+'動手練習 →</button>':'';
+    var exCls=hasGuide?"btn":"btn primary";
+    var lead=hasGuide
+      ? '接下來「跟著做」一步一步完成'+nm[u]+'的動手練習，再用課後評量檢核；也可以重新聽一次。'
+      : '接下來用「'+nm[u]+'課後評量」檢核學習成效，或重新聽一次。';
+    deck.innerHTML='<div class="ds-kicker">講授完成</div><h3 class="ds-title">本課程已講授完畢 🎉</h3><p style="color:#dfeee9;font-size:15px;line-height:1.6">'+lead+'</p><div class="sc-finish">'+gbtn+'<button class="'+exCls+'" id="scExam">📝 直接做'+nm[u]+'課後評量 →</button><button class="btn" id="scReplay">🔁 重新播放</button></div>';
+    var gd=document.getElementById("scGuide"), ex=document.getElementById("scExam"), rp=document.getElementById("scReplay");
+    if(gd) gd.addEventListener("click",function(){ var vk=vmap[u]||"hardware"; closeStudy(); if(window.__show) window.__show(vk); setTimeout(function(){ if(window.CCGUIDE) window.CCGUIDE.start("view-"+vk); },140); });
     if(ex) ex.addEventListener("click",function(){ closeStudy(); if(window.ccStartExam) window.ccStartExam(u); });
     if(rp) rp.addEventListener("click",function(){ SIdx=0; scRender(); scPlayToggle(); });
   }
@@ -3517,6 +3524,475 @@ function makeTrouble(mountId, bank){
   window.CCLECTURES=window.CCLECTURES||{};
   window.CCLECTURES.data={title:"資料處理（Excel⇄pandas／CSV⇄JSON）",unit:"sw",slides:dataSlides};
 })();
+
+/* ============================================================
+   19) 跟著做・引導模式（單一主題聚焦 ＋ 同步字幕 ＋ 旁白；逐步解鎖）
+   設計原則：一次只專注一個主題，其餘暫時淡出；按「下一步」才把下一段
+   自動捲到定位並點亮，避免學生一進來就看到整頁操作而卻步。
+   實作原則：不修改任何既有 HTML，全部以 closest() 定位現成區塊；
+            CSS 由 JS 注入，旁白沿用既有 window.CCSPEAK 引擎。
+============================================================ */
+(function guideMode(){
+  if(!document.getElementById("view-hardware")) return;
+
+  /* ---------- 各單元的引導步驟（字幕＝旁白，白話＋生活比喻，不照稿念） ---------- */
+  var STEPS = {
+    "view-hardware":[
+      {a:"#sub-hw",                 tag:"① 認識主角",
+       t:"我們先認識三位主角。CPU 是大腦、負責運算；記憶體 RAM 是工作桌、東西攤開來才好做事；儲存體是倉庫、收進去才不會不見。先點下面任一張卡，認識它們。"},
+      {a:"#sim-hw",                 tag:"② 開機看看",
+       t:"現在按一下「開機」這個按鈕，看電腦怎麼醒過來。就像早上鬧鐘響、開燈、洗臉、出門，電腦也有固定的開機順序，這個自我檢查叫做 POST。"},
+      {a:"#desk", up:".grid",       tag:"③ 桌面情境",
+       t:"這是電腦桌面情境。你可以點主機裡的零件把它拔掉，再開機一次，看畫面會卡在哪一步。拔掉哪個零件、就會少掉哪個功能，這樣最容易記住每個零件在做什麼。"},
+      {a:"#cyc", up:"section.block", tag:"④ CPU 四拍子",
+       t:"看這四個方塊：擷取、解碼、執行、寫回。這是 CPU 處理每一件事的固定四拍子，像工廠輸送帶一直重複，速度快到我們感覺不出來。"},
+      {a:"#buildSvg", up:"section.block", tag:"⑤ 親手組裝",
+       t:"換你親手組裝。從右邊零件盤選一個零件，放進正確的插槽。放錯會變紅色，紅色不是在罵你，是在幫你快點找到放錯的地方。"},
+      {a:"#hwTrouble", up:"section.block", tag:"⑥ 故障排除",
+       t:"電腦壞掉先別慌。看症狀、猜原因，就像看醫生：先講哪裡不舒服，醫生再找病因。先自己想一個答案，再按驗證對照看看。"},
+      {a:"#lec-hw",                 tag:"⑦ 看講義",
+       t:"動手玩過之後，這份圖文講義把觀念補齊。看不懂的字可以放大，也可以按朗讀讓它念給你聽。"},
+      {a:"#worked-hw",             tag:"⑧ 解題示範",
+       t:"跟著示範一題，看老師怎麼放聲思考、一步一步推理出答案。你會發現解題不是用猜的，是有順序的。"},
+      {a:"#quiz-hw",               tag:"⑨ 課後評量",
+       t:"最後一關是課後評量。前面每一步你都做過了，這關只是把學到的拿出來用，放輕鬆作答就好。"}
+    ],
+    "view-software":[
+      {a:"#sub-sw",                 tag:"① 認識主角",
+       t:"先認識軟體分兩種：作業系統像餐廳經理、負責調度全場；應用程式像各個廚師、負責做出一道道菜。先點下面的卡，認識它們。"},
+      {a:"#sim-sw",                 tag:"② 軟體疊起來",
+       t:"這裡示範軟體怎麼一層一層疊起來跑。先有硬體，再裝作業系統，最後才裝應用程式，順序不能顛倒，就像先蓋地基才能蓋樓。"},
+      {a:"#swStack", up:"section.block", tag:"③ 親手安裝",
+       t:"換你動手安裝。照正確順序把每一層裝上去，再按啟動測試，看少了哪一層會發生什麼事，少一層就跑不起來。"},
+      {a:"#swFlow", up:"section.block", tag:"④ 一個動作的旅程",
+       t:"按「開啟相片」，看一個簡單動作怎麼從應用程式、交給作業系統、再叫硬體幫忙，最後把相片顯示出來。"},
+      {a:"#swTrouble", up:"section.block", tag:"⑤ 故障排除",
+       t:"軟體出問題也先看症狀。先自己猜原因，再按驗證，多練幾次就抓得到那個感覺。"},
+      {a:"#lec-sw",                 tag:"⑥ 看講義",
+       t:"這份講義把軟體觀念補齊，字看不懂可以放大，也可以按朗讀念給你聽。"},
+      {a:"#worked-sw",             tag:"⑦ 解題示範",
+       t:"跟著示範一題，看怎麼一步一步把答案想出來。"},
+      {a:"#quiz-sw",               tag:"⑧ 課後評量",
+       t:"最後做課後評量，前面都練過了，放輕鬆作答就好。"}
+    ],
+    "view-network":[
+      {a:"#sub-nw",                 tag:"① 認識主角",
+       t:"先用生活比喻記網路：IP 位址是門牌、閘道是社區大門、DNS 是電話簿。先點下面的卡，認識它們。"},
+      {a:"#sim-nw",                 tag:"② 上網要設定什麼",
+       t:"這裡示範一台電腦要上網，需要設定哪些東西。就像搬新家要先有門牌、知道大門在哪、手邊有電話簿，設定齊全才連得出去。"},
+      {a:"#netForm", up:"section.block", tag:"③ 親手設定",
+       t:"換你動手設定。把 IP、遮罩、閘道、DNS 填好，再按連線測試 ping，看通不通。也可以按隨機出題，故意設錯讓你練習找錯。"},
+      {a:"#netSvg", up:"section.block", tag:"④ 封包的旅程",
+       t:"按模擬網頁請求，看你的要求怎麼像寄包裹一樣，一站一站送到網站，再把網頁送回來給你。"},
+      {a:"#nwTrouble", up:"section.block", tag:"⑤ 故障排除",
+       t:"網路不通先別急著重開機。看症狀、猜原因，先自己想一個，再按驗證對照。"},
+      {a:"#lec-nw",                 tag:"⑥ 看講義",
+       t:"這份講義把網路觀念補齊，可以放大、也可以朗讀。"},
+      {a:"#worked-nw",             tag:"⑦ 解題示範",
+       t:"跟著示範一題，看推理的順序。"},
+      {a:"#quiz-nw",               tag:"⑧ 課後評量",
+       t:"最後課後評量，前面都練過了，放輕鬆作答。"}
+    ]
+  };
+
+  /* ---------- 樣式（注入；不動既有 head） ---------- */
+  var css = ""
+   + ".view.guiding > *{transition:opacity .35s ease, filter .35s ease}"
+   + ".view.guiding > *:not(.g-active):not(.subbar){opacity:.16;filter:saturate(.5) blur(.7px);pointer-events:none}"
+   + ".view.guiding > .subbar{opacity:1;filter:none}"
+   + ".view.guiding .g-active{opacity:1!important;filter:none!important;pointer-events:auto!important;position:relative;z-index:2;outline:3px solid var(--gcol,#e0b44a);outline-offset:8px;border-radius:18px;scroll-margin-top:84px;scroll-margin-bottom:240px}"
+   + ".view.guiding .g-active::before{content:attr(data-gtag);position:absolute;top:-15px;left:16px;background:var(--gcol,#e0b44a);color:#fff;font:800 12px/1 var(--sans);padding:6px 13px;border-radius:999px;z-index:3;box-shadow:0 4px 12px rgba(20,40,70,.28);white-space:nowrap}"
+   + "body.g-on .a11y-bar{display:none}"
+   + ".gbar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(150%);width:min(720px,93vw);background:linear-gradient(135deg,var(--board,#10312a),var(--board2,#0c2620));color:#fff;border:1px solid rgba(255,255,255,.16);border-top:4px solid var(--gcol,#e0b44a);border-radius:18px;box-shadow:0 18px 54px rgba(8,22,18,.45);padding:14px 16px 12px;z-index:1400;opacity:0;transition:transform .42s cubic-bezier(.2,.9,.3,1.25),opacity .3s;font-family:var(--sans)}"
+   + ".gbar.show{transform:translateX(-50%) translateY(0);opacity:1}"
+   + ".gb-top{display:flex;align-items:center;gap:10px;margin-bottom:9px}"
+   + ".gb-step{font:800 13px var(--sans);color:var(--gold,#e0b44a);white-space:nowrap}"
+   + ".gb-dots{display:flex;gap:6px;flex:1;flex-wrap:wrap;align-items:center}"
+   + ".gb-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.22)}"
+   + ".gb-dot.on{background:var(--gold,#e0b44a)}"
+   + ".gb-dot.cur{background:#fff;box-shadow:0 0 0 3px rgba(224,180,74,.45)}"
+   + ".gb-x{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:6px 13px;font:600 12px var(--sans);cursor:pointer}"
+   + ".gb-x:hover{background:rgba(255,255,255,.24)}"
+   + ".gb-cap{font:600 19px/1.75 var(--sans);margin:2px 2px 13px;min-height:3.4em}"
+   + ".gb-spk{display:inline-block;width:11px;height:11px;border-radius:50%;background:#7fe6a6;margin-right:9px;vertical-align:baseline}"
+   + ".gb-spk.live{animation:gpulse 1s infinite}"
+   + "@keyframes gpulse{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1.3)}}"
+   + ".gb-ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}"
+   + ".gb-btn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.24);border-radius:12px;padding:10px 14px;font:600 14px var(--sans);cursor:pointer;transition:.15s}"
+   + ".gb-btn:hover{background:rgba(255,255,255,.24)}"
+   + ".gb-btn[disabled]{opacity:.4;cursor:default}"
+   + ".gb-auto{display:flex;align-items:center;gap:6px;font:600 13px var(--sans);color:#d8e2dd;cursor:pointer;user-select:none}"
+   + ".gb-next{margin-left:auto;background:var(--gold,#e0b44a);color:#1b2733;border-color:transparent;font-weight:800;padding:10px 22px}"
+   + ".gb-next:hover{filter:brightness(1.06)}"
+   + ".btn.gstart{background:var(--gold,#e0b44a);color:#1b2733;border-color:transparent;font-weight:800}"
+   + ".btn.gstart:hover{filter:brightness(1.05)}"
+   + "@media(max-width:560px){.gb-cap{font-size:17px;line-height:1.7}.gb-btn{padding:9px 12px;font-size:13px}.gb-next{padding:9px 16px}}";
+  var styleEl=document.createElement("style"); styleEl.textContent=css; document.head.appendChild(styleEl);
+
+  /* ---------- 字幕／旁白條 DOM ---------- */
+  var bar=document.createElement("div"); bar.className="gbar"; bar.setAttribute("role","region"); bar.setAttribute("aria-label","跟著做・引導字幕");
+  bar.innerHTML=
+     '<div class="gb-top">'
+   +   '<span class="gb-step" id="gStep">步驟 1 / 1</span>'
+   +   '<div class="gb-dots" id="gDots"></div>'
+   +   '<button class="gb-x" id="gX">✕ 結束引導</button>'
+   + '</div>'
+   + '<div class="gb-cap" id="gCap"></div>'
+   + '<div class="gb-ctrl">'
+   +   '<button class="gb-btn" id="gPrev">◀ 上一步</button>'
+   +   '<button class="gb-btn" id="gReplay">🔊 再聽一次</button>'
+   +   '<button class="gb-btn" id="gMute">🔈 旁白：開</button>'
+   +   '<label class="gb-auto"><input type="checkbox" id="gAuto"> 念完自動下一步</label>'
+   +   '<button class="gb-btn gb-next" id="gNext">下一步 ▶</button>'
+   + '</div>';
+  document.body.appendChild(bar);
+  var capEl=bar.querySelector("#gCap"), stepEl=bar.querySelector("#gStep"), dotsEl=bar.querySelector("#gDots");
+  var prevB=bar.querySelector("#gPrev"), nextB=bar.querySelector("#gNext"),
+      replayB=bar.querySelector("#gReplay"), muteB=bar.querySelector("#gMute"),
+      autoCb=bar.querySelector("#gAuto");
+
+  /* ---------- 狀態 ---------- */
+  var curView=null, steps=[], idx=0, muted=false, token=0;
+
+  function axisColor(id){
+    if(id.indexOf("hardware")>-1) return "var(--hw)";
+    if(id.indexOf("software")>-1) return "var(--sw)";
+    if(id.indexOf("network")>-1)  return "var(--nw)";
+    return "var(--gold)";
+  }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  function resolve(view, s){
+    var a=view.querySelector(s.a); if(!a) return null;
+    var el=s.up ? a.closest(s.up) : a;
+    while(el && el.parentElement!==view) el=el.parentElement;
+    return (el && el.parentElement===view) ? el : null;
+  }
+  function clearActive(){
+    if(!curView) return;
+    var a=curView.querySelector(".g-active");
+    if(a){ a.classList.remove("g-active"); a.removeAttribute("data-gtag"); }
+  }
+  function renderDots(){
+    var h="";
+    for(var i=0;i<steps.length;i++){
+      var c="gb-dot"+(i<idx?" on":"")+(i===idx?" cur":"");
+      h+='<span class="'+c+'"></span>';
+    }
+    dotsEl.innerHTML=h;
+  }
+  function speakCur(){
+    token++; var my=token;
+    var spk=capEl.querySelector(".gb-spk");
+    if(muted || !window.CCSPEAK){ if(spk) spk.classList.remove("live"); return; }
+    if(!window.CCSPEAK.hasZh()){ if(spk) spk.classList.remove("live"); return; }
+    if(spk) spk.classList.add("live");
+    window.CCSPEAK.speak(steps[idx].t, function(){
+      if(spk) spk.classList.remove("live");
+      if(autoCb.checked && my===token && curView && idx<steps.length-1) goTo(idx+1);
+    });
+  }
+  function goTo(i){
+    if(!curView || !steps.length) return;
+    idx=Math.max(0,Math.min(steps.length-1,i));
+    clearActive();
+    var s=steps[idx];
+    if(s.el){
+      if(window.CCLAYER){ try{ window.CCLAYER.setCurrent(curView.id, window.CCLAYER.layerOf(curView.id, s.el)); }catch(e){} }
+      s.el.classList.add("g-active");
+      if(s.tag) s.el.setAttribute("data-gtag",s.tag);
+      try{ s.el.scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){ s.el.scrollIntoView(); }
+    }
+    capEl.innerHTML='<span class="gb-spk"></span>'+esc(s.t);
+    stepEl.textContent="步驟 "+(idx+1)+" / "+steps.length;
+    renderDots();
+    prevB.disabled=(idx===0);
+    nextB.textContent=(idx===steps.length-1)?"✓ 完成":"下一步 ▶";
+    if(window.CCSPEAK) window.CCSPEAK.stop();
+    speakCur();
+  }
+  function exitGuide(keepBar){
+    token++;
+    if(window.CCSPEAK) window.CCSPEAK.stop();
+    if(curView){
+      clearActive();
+      curView.classList.remove("guiding");
+      curView.style.removeProperty("--gcol");
+      if(window.CCLAYER){ try{ window.CCLAYER.show(curView.id, window.CCLAYER.current(curView.id)); }catch(e){} }
+    }
+    curView=null; steps=[]; idx=0;
+    document.body.classList.remove("g-on");
+    if(!keepBar) bar.classList.remove("show");
+  }
+  function start(viewId){
+    var view=document.getElementById(viewId);
+    if(!view){ return; }
+    exitGuide(true);                 // 清掉前一個（保留字幕條）
+    curView=view;
+    view.style.setProperty("--gcol",axisColor(viewId));
+    bar.style.setProperty("--gcol",axisColor(viewId));
+    var src=STEPS[viewId]||[];
+    steps=[];
+    for(var i=0;i<src.length;i++){
+      var s=src[i], el=resolve(view,s);
+      if(el) steps.push({a:s.a,up:s.up,tag:s.tag,t:s.t,el:el});
+    }
+    if(!steps.length){ exitGuide(); return; }
+    view.classList.add("guiding");
+    if(window.CCLAYER){ try{ window.CCLAYER.revealAll(viewId); }catch(e){} }
+    document.body.classList.add("g-on");
+    bar.classList.add("show");
+    idx=0; goTo(0);
+  }
+
+  /* ---------- 字幕條按鈕 ---------- */
+  prevB.addEventListener("click",function(){ if(idx>0) goTo(idx-1); });
+  nextB.addEventListener("click",function(){ if(idx>=steps.length-1) exitGuide(); else goTo(idx+1); });
+  replayB.addEventListener("click",function(){ if(window.CCSPEAK) window.CCSPEAK.stop(); speakCur(); });
+  muteB.addEventListener("click",function(){
+    muted=!muted; this.textContent=muted?"🔇 旁白：關":"🔈 旁白：開";
+    if(muted){ if(window.CCSPEAK) window.CCSPEAK.stop(); var spk=capEl.querySelector(".gb-spk"); if(spk) spk.classList.remove("live"); }
+    else speakCur();
+  });
+  bar.querySelector("#gX").addEventListener("click",function(){ exitGuide(); });
+  document.addEventListener("keydown",function(e){
+    if(!curView) return;
+    if(e.key==="Escape") exitGuide();
+    else if(e.key==="ArrowRight"){ if(idx>=steps.length-1) exitGuide(); else goTo(idx+1); }
+    else if(e.key==="ArrowLeft"){ if(idx>0) goTo(idx-1); }
+  });
+
+  /* ---------- 進入鈕：各模擬單元 subbar ＋ 浮動工具列 ---------- */
+  ["view-hardware","view-software","view-network"].forEach(function(vid){
+    var v=document.getElementById(vid); if(!v) return;
+    var sb=v.querySelector(".subbar"); if(!sb) return;
+    var b=document.createElement("button");
+    b.className="btn gstart"; b.setAttribute("data-gstart",vid);
+    b.textContent="🧭 跟著做（一步一步）";
+    var sp=sb.querySelector(".spacer");
+    if(sp) sb.insertBefore(b,sp); else sb.appendChild(b);
+  });
+  document.addEventListener("click",function(e){
+    var g=e.target.closest && e.target.closest("[data-gstart]");
+    if(g){ e.preventDefault(); start(g.getAttribute("data-gstart")); }
+  });
+
+  /* 浮動工具列加一顆「跟著做」（針對目前所在單元） */
+  var ab=document.querySelector(".a11y-bar");
+  if(ab){
+    var ba=document.createElement("button");
+    ba.className="a11y-btn"; ba.textContent="🧭 跟著做";
+    ba.addEventListener("click",function(){
+      var v=document.querySelector(".view.active");
+      if(v && STEPS[v.id]) start(v.id);
+      else alert("請先進入「硬體 / 軟體 / 網路」其中一個單元，再開始跟著做。");
+    });
+    ab.appendChild(ba);
+  }
+
+  /* ---------- 切換單元 / 返回首頁時自動結束引導 ---------- */
+  document.addEventListener("click",function(e){
+    if(!curView) return;
+    var t=e.target.closest && e.target.closest("[data-back],[data-home],.home-entry,[data-go],[data-scroll],[data-quiz],[data-exam]");
+    if(t) exitGuide();
+  },true);
+
+  /* 對外暴露：供「自主上課模式」結束畫面接續啟動引導 */
+  window.CCGUIDE={ start:start, exit:exitGuide };
+
+})();
+
+
+/* ============================================================
+   20) 分層架構操作介面（大單元：硬體／軟體／網路）
+   把原本一整頁長卷軸，精簡成「一次一層」的學習階段：
+     🎯 認識・目標 → 🧪 互動模擬 → 📖 教學講義 → ✍️ 課後評量
+   預設只顯示當前一層，可點階段自由切換、底部「下一階段」遞進。
+   實作：不改既有 HTML，用 id／class 標記把每個直屬區塊歸到對應層；
+        以 display 切層；與 module 19「跟著做」整合（引導時自動攤開全部跨層走）。
+============================================================ */
+(function layeredUI(){
+  if(!document.getElementById("view-hardware")) return;
+
+  var LAYERS = {
+    "view-hardware":[
+      {k:"intro", ic:"\uD83C\uDFAF", lab:"認識・目標", mark:[".guide","#sub-hw"]},
+      {k:"sim",   ic:"\uD83E\uDDEA", lab:"互動模擬",   mark:["#sim-hw","#desk","#cyc","#buildSvg","#coreCards","#hwTrouble"]},
+      {k:"lec",   ic:"\uD83D\uDCD6", lab:"教學講義",   mark:["#lec-hw","#worked-hw"]},
+      {k:"exam",  ic:"\u270D\uFE0F", lab:"課後評量",   mark:["#quiz-hw"]}
+    ],
+    "view-software":[
+      {k:"intro", ic:"\uD83C\uDFAF", lab:"認識・目標", mark:[".guide","#sub-sw"]},
+      {k:"sim",   ic:"\uD83E\uDDEA", lab:"互動模擬",   mark:["#sim-sw","#swStack","#swFlow","#swTrouble"]},
+      {k:"lec",   ic:"\uD83D\uDCD6", lab:"教學講義",   mark:["#lec-sw","#worked-sw"]},
+      {k:"exam",  ic:"\u270D\uFE0F", lab:"課後評量",   mark:["#quiz-sw"]}
+    ],
+    "view-network":[
+      {k:"intro", ic:"\uD83C\uDFAF", lab:"認識・目標", mark:[".guide","#sub-nw"]},
+      {k:"sim",   ic:"\uD83E\uDDEA", lab:"互動模擬",   mark:["#sim-nw","#netForm","#nwTrouble"]},
+      {k:"lec",   ic:"\uD83D\uDCD6", lab:"教學講義",   mark:["#lec-nw","#worked-nw"]},
+      {k:"exam",  ic:"\u270D\uFE0F", lab:"課後評量",   mark:["#quiz-nw"]}
+    ]
+  };
+  function axisColor(id){
+    if(id.indexOf("hardware")>-1) return "var(--hw)";
+    if(id.indexOf("software")>-1) return "var(--sw)";
+    if(id.indexOf("network")>-1)  return "var(--nw)";
+    return "var(--hw)";
+  }
+
+  /* ---- 樣式 ---- */
+  var css = ""
+   + ".lnav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px;padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 10px rgba(20,40,70,.04)}"
+   + ".ln-lab{font:700 12px var(--mono);color:var(--muted);margin-right:4px}"
+   + ".ln-step{display:inline-flex;align-items:center;gap:7px;font:700 13.5px var(--sans);border:1px solid var(--line);background:#fff;color:var(--muted);padding:8px 13px;border-radius:999px;cursor:pointer;transition:.15s}"
+   + ".ln-step .ln-ic{font-size:15px}"
+   + ".ln-step:hover{border-color:var(--ax,#2e5496);color:var(--ax,#2e5496)}"
+   + ".ln-step.cur{background:var(--ax,#2e5496);border-color:var(--ax,#2e5496);color:#fff;box-shadow:0 4px 14px rgba(20,40,70,.18)}"
+   + ".ln-step.done:not(.cur){border-color:var(--ok);color:var(--ok)}"
+   + ".ln-step.done:not(.cur) .ln-chk{font-weight:800;margin-left:1px}"
+   + ".ln-sep{color:#cfd8e3;font-weight:700;margin:0 1px}"
+   + ".lfoot{display:flex;align-items:center;gap:12px;margin-top:22px;padding:14px 16px;background:linear-gradient(135deg,#f7f9fc,#eef3fb);border:1px solid var(--line);border-radius:14px;flex-wrap:wrap}"
+   + ".lf-hint{color:var(--muted);font:700 13px var(--sans);flex:1;min-width:110px;text-align:center}"
+   + ".lf-btn{background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:10px 16px;font:700 14px var(--sans);cursor:pointer;transition:.15s}"
+   + ".lf-btn:hover:not([disabled]){border-color:var(--ax,#2e5496);color:var(--ax,#2e5496)}"
+   + ".lf-btn[disabled]{opacity:.45;cursor:default}"
+   + ".lf-next{margin-left:auto;background:var(--ax,#2e5496);border-color:transparent;color:#fff}"
+   + ".lf-next:hover:not([disabled]){filter:brightness(1.07);color:#fff}"
+   + ".lf-next[disabled]{background:#9fb0c4}"
+   + ".view.guiding .lnav,.view.guiding .lfoot{display:none!important}"
+   + "@media(max-width:560px){.ln-sep{display:none}.ln-step{padding:7px 11px;font-size:12.5px}.lf-hint{order:3;width:100%;flex-basis:100%}}";
+  var styleEl=document.createElement("style"); styleEl.textContent=css; document.head.appendChild(styleEl);
+
+  var STATE={};
+
+  function classify(view, layers){
+    var carry=0;
+    Array.prototype.forEach.call(view.children, function(ch){
+      if(ch.classList && (ch.classList.contains("subbar")||ch.classList.contains("unitnav"))) return;
+      var li=-1;
+      for(var i=0;i<layers.length && li<0;i++){
+        var marks=layers[i].mark;
+        for(var j=0;j<marks.length;j++){
+          var m=marks[j], hit=false;
+          try{ hit = ch.matches(m) || !!ch.querySelector(m); }catch(e){ hit=false; }
+          if(hit){ li=i; break; }
+        }
+      }
+      if(li<0) li=carry;
+      carry=li;
+      ch.setAttribute("data-layer", String(li));
+    });
+  }
+
+  function renderNav(viewId){
+    var st=STATE[viewId]; if(!st) return;
+    var h='<span class="ln-lab">學習階段</span>';
+    for(var i=0;i<st.layers.length;i++){
+      var L=st.layers[i], cls="ln-step"+(i===st.current?" cur":"")+(st.visited[i]&&i!==st.current?" done":"");
+      h+='<button class="'+cls+'" data-li="'+i+'"><span class="ln-ic">'+L.ic+'</span><b>'+L.lab+'</b>'
+        + (st.visited[i]&&i!==st.current?'<span class="ln-chk">✓</span>':'')+'</button>';
+      if(i<st.layers.length-1) h+='<span class="ln-sep">›</span>';
+    }
+    st.nav.innerHTML=h;
+  }
+  function renderFoot(viewId){
+    var st=STATE[viewId]; if(!st) return;
+    var i=st.current, last=st.layers.length-1;
+    var prevLab=i>0?st.layers[i-1].lab:"上一階段";
+    var nextHtml = i<last
+      ? '<button class="lf-btn lf-next" data-go="next">'+st.layers[i+1].lab+' →</button>'
+      : '<button class="lf-btn lf-next" disabled>✓ 已完成各階段</button>';
+    st.foot.innerHTML =
+        '<button class="lf-btn lf-prev" data-go="prev"'+(i===0?" disabled":"")+'>← '+prevLab+'</button>'
+      + '<span class="lf-hint">階段 '+(i+1)+' / '+st.layers.length+'</span>'
+      + nextHtml;
+  }
+
+  function show(viewId, idx){
+    var view=document.getElementById(viewId), st=STATE[viewId];
+    if(!view||!st) return;
+    idx=Math.max(0, Math.min(st.layers.length-1, idx|0));
+    st.current=idx; st.visited[idx]=true;
+    Array.prototype.forEach.call(view.children, function(ch){
+      var dl=ch.getAttribute&&ch.getAttribute("data-layer");
+      if(dl!=null) ch.style.display = (Number(dl)===idx) ? "" : "none";
+    });
+    renderNav(viewId); renderFoot(viewId);
+    if(!view.classList.contains("guiding")){
+      try{ st.nav.scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){}
+    }
+    try{ window.dispatchEvent(new Event("resize")); }catch(e){}
+  }
+  function layerOf(viewId, el){
+    var view=document.getElementById(viewId), st=STATE[viewId];
+    if(!view||!el) return st?st.current:0;
+    var c=el; while(c && c.parentElement!==view) c=c.parentElement;
+    var dl=c&&c.getAttribute?c.getAttribute("data-layer"):null;
+    return dl!=null?Number(dl):(st?st.current:0);
+  }
+  /* 只更新「目前層」與導覽高亮，不切換 display（供引導模式攤開時使用） */
+  function setCurrent(viewId, idx){
+    var st=STATE[viewId]; if(!st) return;
+    idx=Math.max(0, Math.min(st.layers.length-1, idx|0));
+    st.current=idx; st.visited[idx]=true; renderNav(viewId); renderFoot(viewId);
+  }
+  /* 攤開全部層（保留各自自然的 flex/grid 版面）：引導模式啟動時呼叫 */
+  function revealAll(viewId){
+    var view=document.getElementById(viewId); if(!view) return;
+    Array.prototype.forEach.call(view.children, function(ch){
+      if(ch.getAttribute && ch.getAttribute("data-layer")!=null) ch.style.display="";
+    });
+  }
+
+  /* ---- 初始化各單元 ---- */
+  Object.keys(LAYERS).forEach(function(viewId){
+    var view=document.getElementById(viewId); if(!view) return;
+    var layers=LAYERS[viewId];
+    view.style.setProperty("--ax", axisColor(viewId));
+    classify(view, layers);
+
+    var oldNav=view.querySelector(".unitnav"); if(oldNav) oldNav.style.display="none";
+
+    var nav=document.createElement("div"); nav.className="lnav"; nav.setAttribute("role","tablist");
+    var anchor=oldNav||view.querySelector(".subbar");
+    if(anchor) anchor.insertAdjacentElement("afterend", nav); else view.insertBefore(nav, view.firstChild);
+
+    var foot=document.createElement("div"); foot.className="lfoot";
+    view.appendChild(foot);
+
+    STATE[viewId]={layers:layers, current:0, visited:{}, nav:nav, foot:foot};
+
+    nav.addEventListener("click", function(e){
+      var b=e.target.closest&&e.target.closest(".ln-step"); if(!b) return;
+      show(viewId, Number(b.getAttribute("data-li")));
+    });
+    foot.addEventListener("click", function(e){
+      var b=e.target.closest&&e.target.closest("[data-go]"); if(!b) return;
+      var d=b.getAttribute("data-go");
+      show(viewId, st().current + (d==="next"?1:-1));
+    });
+    function st(){ return STATE[viewId]; }
+
+    show(viewId, 0);
+  });
+
+  /* ---- 跨層連結：點到屬於別層的區塊時，先切到該層再捲過去 ---- */
+  document.addEventListener("click", function(e){
+    var s=e.target.closest&&e.target.closest("[data-scroll]");
+    if(!s) return;
+    var id=s.getAttribute("data-scroll"); if(!id) return;
+    var view=s.closest&&s.closest(".view"); if(!view||!STATE[view.id]) return;
+    var tgt=document.getElementById(id); if(!tgt) return;
+    show(view.id, layerOf(view.id, tgt));
+    setTimeout(function(){ try{ tgt.scrollIntoView({behavior:"smooth",block:"start"}); }catch(e){} }, 70);
+  }, true);
+
+  /* ---- 對外暴露：供「跟著做」引導跨層跟隨 ---- */
+  window.CCLAYER={ show:show, setCurrent:setCurrent, revealAll:revealAll, layerOf:layerOf,
+    current:function(v){ return STATE[v]?STATE[v].current:0; } };
+})();
+
 </script>
 </body>
 </html>
