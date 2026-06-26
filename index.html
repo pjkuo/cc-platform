@@ -4985,5 +4985,704 @@ function makeTrouble(mountId, bank){
 })();
 
 </script>
+
+<!-- ===== 注入：不插電五站實習模組（只增不改 / 冪等防護 / .hpv-lab 前綴 / 接 ccResume 續學 / 過關計數）===== -->
+<style id="hpv-lab-style">
+#hpv-lab-root{
+  --hpv-indigo:#2A2A8A; --hpv-indigo-2:#3A3AC0; --hpv-ink:#15151F;
+  --hpv-red:#C81E1E; --hpv-wash:#E4E6F7; --hpv-card:#FFFFFF;
+  --hpv-green:#127A45; --hpv-amber:#9A5B00; --hpv-line:#A9AED2;
+  --hpv-edge:#5E63A0; --hpv-muted:#3F3F57;
+  --hpv-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --hpv-cjk:"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",sans-serif;
+  font-family:var(--hpv-cjk); color:var(--hpv-ink);
+  max-width:920px; margin:0 auto; padding:8px 0 80px; line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+#hpv-lab-root *{box-sizing:border-box;}
+#hpv-lab-root .hpv-lab-eyebrow{font-size:13px; letter-spacing:.22em; color:var(--hpv-red); font-weight:800;}
+#hpv-lab-root .hpv-lab-h1{font-size:34px; font-weight:900; color:var(--hpv-indigo); margin:6px 0 4px; line-height:1.25;}
+#hpv-lab-root .hpv-lab-sub{color:var(--hpv-muted); font-size:15px; font-weight:600; margin-bottom:22px;}
+#hpv-lab-root .hpv-lab-progress{display:flex; gap:6px; margin:18px 0 30px;}
+#hpv-lab-root .hpv-lab-pseg{flex:1; height:10px; border-radius:99px; background:#C2C6E4;}
+#hpv-lab-root .hpv-lab-pseg.on{background:var(--hpv-indigo);}
+#hpv-lab-root .hpv-lab-pseg.cur{background:var(--hpv-red);}
+#hpv-lab-root .hpv-lab-badge{display:inline-flex; align-items:center; gap:6px; background:var(--hpv-wash); border:1.5px solid var(--hpv-indigo); color:var(--hpv-indigo); font-weight:800; font-size:14px; padding:8px 16px; border-radius:99px; margin:-16px 0 26px;}
+#hpv-lab-root .hpv-lab-badge b{font-family:var(--hpv-mono); font-size:17px; color:var(--hpv-red); margin:0 2px;}
+#hpv-lab-root .hpv-lab-station{border:2px solid var(--hpv-line); border-radius:16px; background:var(--hpv-card);
+  margin-bottom:22px; overflow:hidden; box-shadow:0 3px 14px rgba(20,30,80,.10);}
+#hpv-lab-root .hpv-lab-station.locked .hpv-lab-body{opacity:.5; pointer-events:none;}
+#hpv-lab-root .hpv-lab-shead{display:flex; align-items:center; gap:14px; padding:18px 22px;
+  background:linear-gradient(100deg,#23237A,#3636B4); color:#fff;}
+#hpv-lab-root .hpv-lab-snum{font-size:26px; font-weight:900; width:48px; height:48px; flex:none;
+  display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.22); border-radius:12px; color:#fff;}
+#hpv-lab-root .hpv-lab-stitle{font-size:21px; font-weight:900; color:#fff;}
+#hpv-lab-root .hpv-lab-saxis{font-size:13px; color:#fff; opacity:.92; font-weight:700; letter-spacing:.05em;}
+#hpv-lab-root .hpv-lab-lock{margin-left:auto; font:800 13px var(--hpv-cjk); color:var(--hpv-indigo); background:#fff; border:2px solid #fff; padding:7px 12px; border-radius:8px; cursor:pointer; transition:transform .1s;}
+#hpv-lab-root .hpv-lab-lock:hover{transform:translateY(-1px);}
+#hpv-lab-root .hpv-lab-body{padding:22px;}
+#hpv-lab-root .hpv-lab-concept{background:var(--hpv-wash); border:1px solid #B7BCE6; border-left:6px solid var(--hpv-indigo);
+  padding:13px 16px; border-radius:0 10px 10px 0; margin-bottom:18px; font-size:15px; font-weight:600; color:var(--hpv-ink);}
+#hpv-lab-root .hpv-lab-step{font-weight:900; color:var(--hpv-indigo); font-size:16px; margin:20px 0 10px;
+  display:flex; align-items:center; gap:8px;}
+#hpv-lab-root .hpv-lab-step .hpv-lab-dot{width:10px; height:10px; border-radius:99px; background:var(--hpv-red);}
+#hpv-lab-root .hpv-lab-think{font-weight:900; color:var(--hpv-red);}
+#hpv-lab-root .hpv-lab-hint{font-size:13.5px; color:var(--hpv-muted); font-weight:600; margin:6px 0 0;}
+
+/* binary cards */
+#hpv-lab-root .hpv-lab-cards{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:14px 0;}
+#hpv-lab-root .hpv-lab-card{width:92px; height:118px; border:3px solid var(--hpv-indigo); border-radius:12px;
+  background:#fff; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-weight:900; transition:background .2s, transform .2s; user-select:none; position:relative;}
+#hpv-lab-root .hpv-lab-card .hpv-lab-cv{font-size:32px; color:var(--hpv-indigo);}
+#hpv-lab-root .hpv-lab-card .hpv-lab-cb{font-size:12px; font-weight:800; color:var(--hpv-indigo); position:absolute; bottom:8px;}
+#hpv-lab-root .hpv-lab-card.off{background:var(--hpv-indigo); border-color:var(--hpv-indigo);}
+#hpv-lab-root .hpv-lab-card.off .hpv-lab-cv{color:#fff;}
+#hpv-lab-root .hpv-lab-card.off .hpv-lab-cb{color:#fff;}
+#hpv-lab-root .hpv-lab-readout{text-align:center; margin:16px 0;}
+#hpv-lab-root .hpv-lab-bin{font-family:var(--hpv-mono); font-size:36px; font-weight:800; letter-spacing:.18em; color:var(--hpv-ink);}
+#hpv-lab-root .hpv-lab-dec{font-size:17px; color:var(--hpv-ink); font-weight:700;}
+#hpv-lab-root .hpv-lab-target{text-align:center; font-size:16px; font-weight:700; margin:12px 0;}
+#hpv-lab-root .hpv-lab-target b{color:var(--hpv-red); font-size:24px;}
+
+/* sorting */
+#hpv-lab-root .hpv-lab-row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin:12px 0;}
+#hpv-lab-root .hpv-lab-box{width:58px; height:64px; border-radius:10px; border:3px solid var(--hpv-indigo);
+  background:#fff; color:var(--hpv-indigo); font-weight:900; font-size:18px; cursor:pointer; display:flex;
+  align-items:center; justify-content:center; transition:transform .15s, background .15s; user-select:none;}
+#hpv-lab-root .hpv-lab-box.sel{background:var(--hpv-amber); color:#fff; border-color:var(--hpv-amber); transform:translateY(-4px);}
+#hpv-lab-root .hpv-lab-box.heavier{background:var(--hpv-red); color:#fff; border-color:var(--hpv-red);}
+#hpv-lab-root .hpv-lab-box.placed{background:var(--hpv-indigo); color:#fff; border-color:var(--hpv-indigo); cursor:default;}
+#hpv-lab-root .hpv-lab-orderzone{min-height:64px; border:2px dashed var(--hpv-indigo); border-radius:12px;
+  padding:8px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center; margin:8px 0; background:#F4F5FC;}
+#hpv-lab-root .hpv-lab-orderzone .hpv-lab-ph{color:var(--hpv-muted); font-size:14px; font-weight:600;}
+#hpv-lab-root .hpv-lab-counter{text-align:center; font-size:15px; color:var(--hpv-ink); font-weight:700; margin:10px 0;}
+#hpv-lab-root .hpv-lab-counter b{color:var(--hpv-red); font-size:22px; font-family:var(--hpv-mono);}
+#hpv-lab-root .hpv-lab-bars{display:flex; align-items:flex-end; justify-content:center; gap:12px; height:172px; margin:18px 0 6px; padding:0 6px;}
+#hpv-lab-root .hpv-lab-barcol{display:flex; flex-direction:column; align-items:center; gap:6px;}
+#hpv-lab-root .hpv-lab-bar{width:44px; background:var(--hpv-indigo); border-radius:8px 8px 0 0; transition:height .2s, background .2s, outline .15s;}
+#hpv-lab-root .hpv-lab-barnum{font-family:var(--hpv-mono); font-weight:800; font-size:16px; color:var(--hpv-ink);}
+#hpv-lab-root .hpv-lab-barcol.active .hpv-lab-bar{outline:3px solid var(--hpv-amber); outline-offset:3px;}
+#hpv-lab-root .hpv-lab-barcol.active .hpv-lab-barnum{color:var(--hpv-amber);}
+#hpv-lab-root .hpv-lab-bar.taller{background:var(--hpv-red);}
+#hpv-lab-root .hpv-lab-barcol.sorted .hpv-lab-bar{background:var(--hpv-green);}
+
+/* graph */
+#hpv-lab-root .hpv-lab-graphwrap{display:flex; justify-content:center; margin:10px 0;}
+#hpv-lab-root svg .hpv-lab-edge{stroke:var(--hpv-edge); stroke-width:6; cursor:pointer; transition:stroke .15s;}
+#hpv-lab-root svg .hpv-lab-edge.on{stroke:var(--hpv-indigo); stroke-width:9;}
+#hpv-lab-root svg .hpv-lab-elabel{font-size:14px; fill:var(--hpv-ink); font-weight:800; pointer-events:none; font-family:var(--hpv-mono);}
+#hpv-lab-root svg .hpv-lab-node{fill:#fff; stroke:var(--hpv-indigo); stroke-width:3.5;}
+#hpv-lab-root svg .hpv-lab-node.isolated{fill:#FBDEDC; stroke:var(--hpv-red); stroke-width:4;}
+#hpv-lab-root svg .hpv-lab-nlabel{font-size:15px; fill:var(--hpv-indigo); font-weight:900; pointer-events:none; text-anchor:middle;}
+
+/* iot sim */
+#hpv-lab-root .hpv-lab-pipe{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:14px 0;
+  background:#F4F5FC; border:1px solid var(--hpv-line); border-radius:12px; padding:16px;}
+#hpv-lab-root .hpv-lab-pnode{text-align:center; font-size:13px; color:var(--hpv-ink); font-weight:700;}
+#hpv-lab-root .hpv-lab-pnode .hpv-lab-pic{font-size:30px;}
+#hpv-lab-root .hpv-lab-arrow{flex:1; height:4px; background:var(--hpv-edge); position:relative; border-radius:2px;}
+#hpv-lab-root .hpv-lab-stat{display:flex; gap:18px; justify-content:center; margin:12px 0; font-size:15px; font-weight:700; color:var(--hpv-ink);}
+#hpv-lab-root .hpv-lab-stat b{font-family:var(--hpv-mono); font-size:22px; color:var(--hpv-indigo);}
+#hpv-lab-root .hpv-lab-chips{display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:4px 0 8px; min-height:26px;}
+#hpv-lab-root .hpv-lab-chip{width:24px; height:24px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-weight:900; font-size:14px; color:#fff;}
+#hpv-lab-root .hpv-lab-chip.ok{background:var(--hpv-green);}
+#hpv-lab-root .hpv-lab-chip.no{background:var(--hpv-red);}
+
+/* parity grid */
+#hpv-lab-root .hpv-lab-grid{display:grid; gap:5px; justify-content:center; margin:14px auto; width:max-content;}
+#hpv-lab-root .hpv-lab-cell{width:34px; height:34px; border-radius:7px; cursor:pointer; border:2px solid #9AA0C8; transition:transform .12s;}
+#hpv-lab-root .hpv-lab-cell.b{background:var(--hpv-ink); border-color:var(--hpv-ink);}
+#hpv-lab-root .hpv-lab-cell.w{background:#fff;}
+#hpv-lab-root .hpv-lab-cell.parity{box-shadow:inset 0 0 0 3px var(--hpv-amber);}
+#hpv-lab-root .hpv-lab-cell.guess{border-color:var(--hpv-red); border-width:3px; transform:scale(1.14);}
+#hpv-lab-root .hpv-lab-cell.reveal{box-shadow:0 0 0 3px var(--hpv-green);}
+
+/* shared controls */
+#hpv-lab-root .hpv-lab-btn{display:inline-flex; align-items:center; gap:8px; border:2px solid var(--hpv-indigo); cursor:pointer;
+  font-family:inherit; font-weight:800; font-size:15px; padding:10px 18px; border-radius:10px;
+  background:var(--hpv-indigo); color:#fff; transition:background .15s, transform .1s;}
+#hpv-lab-root .hpv-lab-btn:hover{background:var(--hpv-indigo-2); border-color:var(--hpv-indigo-2);}
+#hpv-lab-root .hpv-lab-btn:active{transform:translateY(1px);}
+#hpv-lab-root .hpv-lab-btn.ghost{background:#fff; color:var(--hpv-indigo); border-color:var(--hpv-indigo);}
+#hpv-lab-root .hpv-lab-btn.ghost:hover{background:var(--hpv-wash);}
+#hpv-lab-root .hpv-lab-controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0;}
+#hpv-lab-root .hpv-lab-fb{margin:10px 0; padding:11px 15px; border-radius:10px; font-size:15px; font-weight:800; display:none;}
+#hpv-lab-root .hpv-lab-fb.ok{display:block; background:#D6F0E0; color:#0E6638; border:1px solid #0E6638;}
+#hpv-lab-root .hpv-lab-fb.no{display:block; background:#FBDEDC; color:#B41818; border:1px solid #B41818;}
+#hpv-lab-root .hpv-lab-fb.info{display:block; background:var(--hpv-wash); color:var(--hpv-indigo); border:1px solid var(--hpv-indigo);}
+
+/* verify + gate */
+#hpv-lab-root .hpv-lab-verify{margin-top:18px; padding-top:16px; border-top:2px dashed var(--hpv-line);}
+#hpv-lab-root .hpv-lab-vlink{background:#fff; color:var(--hpv-indigo); border-color:var(--hpv-indigo);}
+#hpv-lab-root .hpv-lab-vlink:hover{background:var(--hpv-wash);}
+#hpv-lab-root .hpv-lab-gate{margin-top:16px; background:#FBDEDC; border:1px solid #E7A9A4; border-left:6px solid var(--hpv-red);
+  border-radius:0 10px 10px 0; padding:14px 16px; display:flex; gap:12px; align-items:flex-start;}
+#hpv-lab-root .hpv-lab-gate input{width:22px; height:22px; margin-top:2px; accent-color:var(--hpv-red); cursor:pointer; flex:none;}
+#hpv-lab-root .hpv-lab-gate label{font-size:15px; font-weight:700; color:var(--hpv-ink); cursor:pointer;}
+#hpv-lab-root .hpv-lab-gate .hpv-lab-gt{font-weight:900; color:var(--hpv-red);}
+#hpv-lab-root .hpv-lab-done{text-align:center; padding:30px; color:#fff; font-weight:900; font-size:19px;
+  background:var(--hpv-green); border-radius:16px; margin-top:10px; display:none;}
+#hpv-lab-root .hpv-lab-foot{margin-top:30px; font-size:12.5px; color:var(--hpv-muted); font-weight:600; text-align:center; line-height:1.8;}
+@media (max-width:560px){
+  #hpv-lab-root .hpv-lab-h1{font-size:26px;}
+  #hpv-lab-root .hpv-lab-card{width:74px; height:96px;}
+  #hpv-lab-root .hpv-lab-bin{font-size:28px;}
+}
+@media (prefers-reduced-motion:reduce){
+  #hpv-lab-root *{transition:none !important;}
+}
+</style>
+<script id="hpv-lab-script">
+(function(){
+  "use strict";
+  if (window.__ccLabInjected) return;        // 冪等防護：避免重複注入
+  window.__ccLabInjected = true;
+
+  // ── 平台連結與站點設定（可直接編輯）────────────────────────────
+  var CC_LAB_CONFIG = {
+    title: "不插電的資訊科學 · 五站式實習",
+    subtitle: "先思考 → 後驗證　|　每站動手推理，再連到平台實習單元驗證",
+    stations: [
+      { num:"1", axis:"① 硬體", title:"二進位數字",
+        concept:"電腦裡只有 0 和 1。每張卡是右邊那張的兩倍（16 8 4 2 1）。「秀出＝1、蓋住＝0」，露出的點數加起來就是它表示的數字。",
+        verifyLabel:"開啟：數字系統 / 進位轉換單元",
+        verifyUrl:"https://pjkuo.github.io/cc-platform",
+        gate:"我能把卡片排成指定數字，也看懂 0/1 就是電腦儲存數字的方式。" },
+      { num:"2", axis:"② 軟體", title:"排序演算法（氣泡排序）",
+        concept:"電腦排序時一次只看相鄰的兩個。氣泡排序：從左到右比較相鄰兩根，左邊比較高就交換；每跑完一輪，最高的就「浮」到最右邊定位——重複到全部由矮到高。",
+        verifyLabel:"開啟：演算法視覺化單元",
+        verifyUrl:"https://pjkuo.github.io/cc-platform",
+        gate:"我用氣泡排序把長條由矮到高排好，也懂了每一輪會把最大的推到最右邊。" },
+      { num:"3", axis:"③ 網路", title:"最小生成樹",
+        concept:"泥濘城市要鋪石板路連起所有房子，石板越少越好。優先鋪最短、且能連到新房子的路；兩端已連通就跳過。這就是網路最省的連接方式。",
+        verifyLabel:"開啟：封包流 / 網路單元",
+        verifyUrl:"https://pjkuo.github.io/cc-platform",
+        gate:"我找到讓全部房子連通、且石板總數最少的鋪法。" },
+      { num:"4", axis:"④ 物聯網", title:"可靠傳輸",
+        concept:"感測器把讀數送到雲端，但通道會掉資料。試試看：沒有「確認與重送」時資料會遺失；開啟後，協定會重送直到送達。",
+        verifyLabel:"開啟：感測上雲單元",
+        verifyUrl:"https://pjkuo.github.io/cc-platform",
+        gate:"我理解為什麼網路需要「確認與重送」這類通訊協定。" },
+      { num:"5", axis:"⑤ 線上評量", title:"錯誤偵測",
+        concept:"多加一行一列「校驗格」，讓每行每列的黑格數為偶數。電腦偷翻一張卡後，哪一行哪一列變奇數，交叉點就是被翻的那張——資料傳輸就是這樣自動偵錯。",
+        verifyLabel:"開啟：AICT 線上評量",
+        verifyUrl:"https://pjkuo.github.io/AICT-assess-platform",
+        gate:"我能用奇偶校驗找出被翻動的那一格，完成綜合驗收。" }
+    ]
+  };
+
+  // ── 整合 cc 平台：動態建立「實習」分頁與首頁導覽卡（不改既有 HTML）──
+  var ov = document.getElementById("view-overview");
+  if (!ov || !ov.parentNode) return;          // 不在目標平台則安靜跳過
+  function callShow(v){ if (window.__show) window.__show(v);
+    else { document.querySelectorAll(".view").forEach(function(x){ x.classList.toggle("active", x.id==="view-"+v); }); window.scrollTo({top:0}); } }
+  var section = document.createElement("section");
+  section.className = "view"; section.id = "view-lab";
+  var back = document.createElement("button");
+  back.className = "btn"; back.setAttribute("data-back",""); back.style.cssText = "margin-bottom:14px";
+  back.textContent = "← 返回首頁";
+  back.addEventListener("click", function(){ callShow("overview"); });
+  section.appendChild(back);
+  var root = document.createElement("div");
+  root.id = "hpv-lab-root";
+  section.appendChild(root);
+  ov.parentNode.appendChild(section);
+  (function(){
+    var grids = ov.querySelectorAll(".navgrid");
+    if (!grids.length) return;
+    var grp = document.createElement("div"); grp.className = "grp";
+    grp.innerHTML = '<span class="grp-t">延伸實習</span><span class="grp-s">不插電・先思考後驗證</span>';
+    var grid = document.createElement("div"); grid.className = "navgrid";
+    var card = document.createElement("div"); card.className = "navcard";
+    card.style.gridColumn = "1 / -1";          // 跨整列，與格線對齊
+    card.style.borderTop = "4px solid #29297A";
+    card.style.flexDirection = "row"; card.style.alignItems = "center"; card.style.flexWrap = "wrap"; card.style.gap = "10px 18px";
+    card.innerHTML =
+      '<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:240px">'+
+        '<span class="nc-ico" style="font-size:24px">⚡</span>'+
+        '<div><b style="font-size:15px">不插電五站實習</b>'+
+        '<span style="display:block;font-size:12px;color:var(--muted)">動手玩，再連平台驗證　·　二進位・排序・最小生成樹・可靠傳輸・錯誤偵測</span></div>'+
+      '</div>';
+    var go = document.createElement("button"); go.className = "btn primary";
+    go.setAttribute("data-goto","lab"); go.textContent = "前往實習 →"; go.style.marginLeft = "auto";
+    go.addEventListener("click", function(){ callShow("lab"); });
+    card.appendChild(go); grid.appendChild(card);
+    var firstGrid = grids[0];                   // 接在「學習模組」之後
+    firstGrid.parentNode.insertBefore(grp, firstGrid.nextSibling);
+    grp.parentNode.insertBefore(grid, grp.nextSibling);
+  })();
+
+  // ── 接上平台 ccResume 續學：localStorage 持久化 + 「繼續實習」橫幅（含過關次數）──
+  var LABKEY = "cc_lab_v1";
+  function labLoad(){ try{ var s=localStorage.getItem(LABKEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
+  function labSave(o){ try{ localStorage.setItem(LABKEY, JSON.stringify(o)); }catch(e){} }
+  // 還原：交給模組於建構完成後套用（含 done 陣列與 passes 累積）
+  window.__ccLabRestore = function(){ var L=labLoad(); if(!L) return null;
+    return { unlocked:(typeof L.unlocked==="number"?L.unlocked:0), done:(L.done||[]), passes:(L.passes||0) }; };
+  // 進度變動：寫入並刷新橫幅
+  window.__ccLabOnProgress = function(info){
+    labSave({ unlocked:info.unlocked, done:info.done, passes:info.passes, doneCount:info.doneCount, ts:Date.now() });
+    if(window.ccResume && window.ccResume.render) window.ccResume.render();
+  };
+  // 進入實習：更新時間戳，讓「繼續上次」知道最近落點在實習
+  if (window.__show){
+    var _show = window.__show;
+    window.__show = function(k){ var r=_show(k);
+      if (k==="lab"){ var L=labLoad()||{}; L.ts=Date.now(); labSave(L); }
+      return r;
+    };
+  }
+  // 包裝 ccResume.render：實習較近 → 顯示「繼續實習（已過關 n/總、累積通過 y 次）」；否則沿用平台原本續學
+  (function(){
+    var prev = (window.ccResume && window.ccResume.render) || null;
+    function labBanner(){
+      var L = labLoad(); if(!L) return false;
+      var pl; try{ pl=JSON.parse(localStorage.getItem("cc_last_v1")||"null"); }catch(e){ pl=null; }
+      if (pl && pl.ts && L.ts && pl.ts > L.ts) return false;   // 平台單元較新 → 交還原本續學
+      var api = window.__ccLab; if(!api) return false;
+      var t=document.getElementById("ovResumeTitle"), s=document.getElementById("ovResumeSub"), b=document.getElementById("ovResumeBtn");
+      if(!t||!s||!b) return false;
+      var n = api.getDoneCount(), fu = api.getFirstUndone(), passes = api.getPasses();
+      if (n>=api.count){ t.textContent="🎓 實習已全部過關";
+        s.textContent="五站不插電實習已全部過關（累積通過 "+passes+" 次），可重溫任一站。"; }
+      else { t.textContent="繼續實習（已過關 "+n+" / "+api.count+" 站）";
+        s.textContent="已過關 "+n+" / "+api.count+" 站、累積通過 "+passes+" 次。下一站：第 "+(fu+1)+" 站「"+api.stations[Math.min(fu,api.count-1)].title+"」。"; }
+      b.textContent="繼續實習 →";
+      b.onclick=function(){ if(window.__show) window.__show("lab");
+        setTimeout(function(){ var el=api.sectionEls[Math.min(fu,api.count-1)]; if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); },120); };
+      return true;
+    }
+    function wrapped(){ if(labBanner()) return; if(prev) prev(); }
+    if (window.ccResume) window.ccResume.render = wrapped; else window.ccResume = {render:wrapped};
+  })();
+  var state = { unlocked: 0, done: [], passes: 0 }; // unlocked=最高可存取站；done[i]=該站已過關；passes=累積通過次數
+  var N = CC_LAB_CONFIG.stations.length;
+
+  // ── helpers ──────────────────────────────────────────────────
+  function el(tag, cls, html){ var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+  function rnd(n){ return Math.floor(Math.random()*n); }
+
+  // ── header + progress ───────────────────────────────────────
+  var head = el("div");
+  head.appendChild(el("div","hpv-lab-eyebrow","計算機概論實習　·　郭博仁"));
+  head.appendChild(el("div","hpv-lab-h1",CC_LAB_CONFIG.title));
+  head.appendChild(el("div","hpv-lab-sub",CC_LAB_CONFIG.subtitle));
+  var prog = el("div","hpv-lab-progress");
+  var segs=[];
+  for(var i=0;i<N;i++){ var s=el("div","hpv-lab-pseg"); prog.appendChild(s); segs.push(s); }
+  head.appendChild(prog);
+  var badge = el("div","hpv-lab-badge");
+  head.appendChild(badge);
+  root.appendChild(head);
+
+  function firstUndone(){ for(var i=0;i<N;i++){ if(!state.done[i]) return i; } return N; }
+  function doneCount(){ var c=0; for(var i=0;i<N;i++){ if(state.done[i]) c++; } return c; }
+  function refreshProgress(){
+    var fu=firstUndone();
+    for(var i=0;i<N;i++){
+      segs[i].className="hpv-lab-pseg"+(state.done[i]?" on":(i===fu?" cur":""));
+    }
+  }
+  function refreshBadge(){
+    badge.innerHTML = "🎯 已過關 <b>"+doneCount()+"</b> / "+N+" 站　·　累積通過 <b>"+state.passes+"</b> 次";
+  }
+
+  // ── station shell ────────────────────────────────────────────
+  var stationEls=[];
+  function buildStation(idx){
+    var cfg=CC_LAB_CONFIG.stations[idx];
+    var st=el("div","hpv-lab-station"+(idx>state.unlocked?" locked":""));
+    var head=el("div","hpv-lab-shead");
+    head.appendChild(el("div","hpv-lab-snum",cfg.num));
+    var tw=el("div");
+    tw.appendChild(el("div","hpv-lab-stitle",cfg.title));
+    tw.appendChild(el("div","hpv-lab-saxis",cfg.axis+" 站"));
+    head.appendChild(tw);
+    var lock=el("button","hpv-lab-lock"); lock.type="button"; lock._isLock=true;
+    lock.addEventListener("click",function(){ unlockStation(idx); });
+    head.appendChild(lock);
+    st.appendChild(head);
+
+    var body=el("div","hpv-lab-body");
+    body.appendChild(el("div","hpv-lab-concept",cfg.concept));
+
+    // interactive area (per station)
+    var inter=el("div");
+    body.appendChild(inter);
+    buildInteractive(idx, inter);
+
+    // verify
+    var verify=el("div","hpv-lab-verify");
+    verify.appendChild(el("div","hpv-lab-step",'<span class="hpv-lab-dot"></span>後驗證：連到平台實習單元'));
+    var vbtn=el("a","hpv-lab-btn hpv-lab-vlink","🔗 "+cfg.verifyLabel);
+    vbtn.href=cfg.verifyUrl; vbtn.target="_blank"; vbtn.rel="noopener";
+    verify.appendChild(vbtn);
+    body.appendChild(verify);
+
+    // gate
+    var gate=el("div","hpv-lab-gate");
+    var cb=el("input"); cb.type="checkbox"; cb.id="hpv-lab-gate-"+idx;
+    var lb=el("label"); lb.htmlFor=cb.id;
+    lb.innerHTML='<span class="hpv-lab-gt">確認閘　</span>'+cfg.gate;
+    cb.addEventListener("change",function(){
+      var was=!!state.done[idx];
+      state.done[idx]=cb.checked;
+      if(cb.checked && !was) state.passes++;                 // 累積通過次數（每次新通過 +1）
+      if(cb.checked) state.unlocked=Math.max(state.unlocked, Math.min(idx+1,N-1)); // 完成→自動解鎖下一站
+      refreshLocks(); refreshProgress(); refreshBadge(); persist();
+      var allDone=(doneCount()>=N);
+      doneBox.style.display=allDone?"block":"none";
+      if(cb.checked){
+        if(allDone) doneBox.scrollIntoView({behavior:"smooth",block:"center"});
+        else if(idx+1<N) stationEls[idx+1].scrollIntoView({behavior:"smooth",block:"start"});
+      }
+    });
+    gate.appendChild(cb); gate.appendChild(lb);
+    body.appendChild(gate);
+
+    st.appendChild(body);
+    return st;
+  }
+
+  function refreshLocks(){
+    for(var i=0;i<N;i++){
+      var locked = i>state.unlocked;
+      stationEls[i].classList.toggle("locked",locked);
+      var lk=stationEls[i].querySelector(".hpv-lab-lock");
+      if(lk){ lk.style.display = locked? "":"none"; lk.textContent = locked? "🔓 點我解鎖這一站":""; }
+    }
+  }
+  function unlockStation(idx){            // 學生自行啟動解鎖（與「完成自動解鎖」並存）
+    state.unlocked = Math.max(state.unlocked, idx);
+    refreshLocks(); refreshProgress(); persist();
+  }
+  function persist(){
+    if(typeof window.__ccLabOnProgress==="function"){
+      window.__ccLabOnProgress({ unlocked:state.unlocked, done:state.done.slice(), passes:state.passes,
+        doneCount:doneCount(), total:N, firstUndone:firstUndone(), allDone:doneCount()>=N });
+    }
+  }
+
+  // ── interactives ─────────────────────────────────────────────
+  function buildInteractive(idx, host){
+    if(idx===0) return binaryActivity(host);
+    if(idx===1) return sortActivity(host);
+    if(idx===2) return mstActivity(host);
+    if(idx===3) return iotActivity(host);
+    if(idx===4) return parityActivity(host);
+  }
+
+  function thinkStep(host, text){
+    host.appendChild(el("div","hpv-lab-step",'<span class="hpv-lab-dot"></span><span class="hpv-lab-think">先思考</span>　'+text));
+  }
+  function feedback(host){ var f=el("div","hpv-lab-fb"); host.appendChild(f); return f; }
+  function setFb(f,type,msg){ f.className="hpv-lab-fb "+type; f.innerHTML=msg; }
+
+  // STATION 1 — binary cards
+  function binaryActivity(host){
+    thinkStep(host,"點卡片切換「秀出 / 蓋住」，把它排成下方指定的數字。");
+    var vals=[16,8,4,2,1];
+    var on=[false,false,false,false,false];
+    var targets=[9,21,6,31,25,13];
+    var ti=0;
+    var cards=el("div","hpv-lab-cards");
+    var cardEls=[];
+    vals.forEach(function(v,i){
+      var c=el("div","hpv-lab-card off");
+      c.tabIndex=0; c.setAttribute("role","button"); c.setAttribute("aria-label",v+" 點");
+      c.innerHTML='<span class="hpv-lab-cv">'+v+'</span><span class="hpv-lab-cb">蓋住 = 0</span>';
+      function toggle(){
+        on[i]=!on[i];
+        c.classList.toggle("off",!on[i]);
+        c.querySelector(".hpv-lab-cb").textContent = on[i]? "秀出 = 1":"蓋住 = 0";
+        render();
+      }
+      c.addEventListener("click",toggle);
+      c.addEventListener("keydown",function(e){ if(e.key===" "||e.key==="Enter"){e.preventDefault();toggle();} });
+      cards.appendChild(c); cardEls.push(c);
+    });
+    host.appendChild(cards);
+    var ro=el("div","hpv-lab-readout");
+    var bin=el("div","hpv-lab-bin","00000");
+    var dec=el("div","hpv-lab-dec","十進位 = 0");
+    ro.appendChild(bin); ro.appendChild(dec); host.appendChild(ro);
+    var tg=el("div","hpv-lab-target"); host.appendChild(tg);
+    var fb=feedback(host);
+    function render(){
+      var b="",sum=0;
+      for(var i=0;i<5;i++){ b+= on[i]?"1":"0"; if(on[i]) sum+=vals[i]; }
+      bin.textContent=b; dec.textContent="十進位 = "+sum;
+      if(sum===targets[ti]){ setFb(fb,"ok","✓ 正確！"+b+" = "+sum+"。這就是電腦儲存 "+sum+" 的方式。"); }
+      else { var d=targets[ti]-sum; setFb(fb,"info", d>0? ("目前湊出 "+sum+"，還差 "+d+"——再露出能補上的卡。") : ("目前湊出 "+sum+"，多了 "+(-d)+"——蓋住一些卡。")); }
+    }
+    function setTarget(){ tg.innerHTML='目標：把卡片排成　<b>'+targets[ti]+'</b>'; }
+    var ctr=el("div","hpv-lab-controls");
+    var nextT=el("button","hpv-lab-btn ghost","換一題 →");
+    nextT.addEventListener("click",function(){ ti=(ti+1)%targets.length; setTarget(); render(); });
+    ctr.appendChild(nextT);
+    host.appendChild(ctr);
+    host.appendChild(el("div","hpv-lab-hint","試試看：這五張卡能排出的最小是多少？最大呢？（提示：全蓋 = 0，全秀 = 31）"));
+    setTarget(); render();
+  }
+
+  // STATION 2 — bubble sort（氣泡排序：相鄰兩根，左高就換；高度可見、規則內建、必定可完成）
+  function sortActivity(host){
+    var n=6;
+    var heights=[]; for(var h=1;h<=n;h++) heights.push(h);           // 1..n，保證可排序
+    for(var s=heights.length-1;s>0;s--){ var r=rnd(s+1); var t=heights[s]; heights[s]=heights[r]; heights[r]=t; }
+    var arr=heights.map(function(v){ return {h:v}; });
+    var i=0, sortedFrom=n, comparisons=0, swapsThisPass=0, finished=false, maxH=n;
+
+    thinkStep(host,"看被橘框圈起來的兩根：左邊比較高（紅色）就按「交換」，否則按「不換」。重複到全部由矮到高。");
+    var barsWrap=el("div","hpv-lab-bars"); host.appendChild(barsWrap);
+    var ctr=el("div","hpv-lab-counter"); host.appendChild(ctr);
+    var ctrls=el("div","hpv-lab-controls");
+    var swapBtn=el("button","hpv-lab-btn","🔁 交換這兩根");
+    var keepBtn=el("button","hpv-lab-btn ghost","➡️ 不換，下一對");
+    var reset=el("button","hpv-lab-btn ghost","重新洗牌");
+    ctrls.appendChild(swapBtn); ctrls.appendChild(keepBtn); ctrls.appendChild(reset);
+    host.appendChild(ctrls);
+    var fb=feedback(host);
+
+    function render(){
+      barsWrap.innerHTML="";
+      arr.forEach(function(b,ix){
+        var col=el("div","hpv-lab-barcol");
+        var bar=el("div","hpv-lab-bar");
+        bar.style.height=(26+b.h/maxH*120)+"px";
+        if(finished || ix>=sortedFrom){ col.classList.add("sorted"); }
+        else if(ix===i || ix===i+1){
+          col.classList.add("active");
+          var taller = arr[i].h>arr[i+1].h ? i : i+1;
+          bar.classList.add(ix===taller? "taller":"shorter");
+        }
+        col.appendChild(bar);
+        col.appendChild(el("div","hpv-lab-barnum", String(b.h)));
+        barsWrap.appendChild(col);
+      });
+      ctr.innerHTML = finished ? "氣泡排序完成 ✓" :
+        ("比較次數（成本）：<b>"+comparisons+"</b>　·　正在比第 "+(i+1)+" 與 "+(i+2)+" 根");
+    }
+    function advance(){
+      i++;
+      if(i>=sortedFrom-1){              // 本輪走到未排序區末端：最大的已浮到最右
+        sortedFrom--; i=0;
+        if(swapsThisPass===0 || sortedFrom<=1) finished=true;
+        swapsThisPass=0;
+      }
+      if(finished){ done(); } else { render(); }
+    }
+    function done(){
+      finished=true; render();
+      swapBtn.disabled=keepBtn.disabled=true; swapBtn.style.opacity=keepBtn.style.opacity="0.5";
+      setFb(fb,"ok","✓ 排好了！氣泡排序完成，總共比較 "+comparisons+" 次。每一輪都把最大的往右邊推到定位。");
+    }
+    swapBtn.addEventListener("click",function(){
+      if(finished) return;
+      if(arr[i].h>arr[i+1].h){ var t=arr[i]; arr[i]=arr[i+1]; arr[i+1]=t; swapsThisPass++; comparisons++; fb.className="hpv-lab-fb"; advance(); }
+      else setFb(fb,"info","這一對右邊比較高，不用交換～改按「不換」繼續。");
+    });
+    keepBtn.addEventListener("click",function(){
+      if(finished) return;
+      if(arr[i].h<=arr[i+1].h){ comparisons++; fb.className="hpv-lab-fb"; advance(); }
+      else setFb(fb,"no","左邊比較高（紅色），要按「交換」才對！");
+    });
+    reset.addEventListener("click",function(){ host.innerHTML=""; sortActivity(host); });
+    render();
+  }
+
+  // STATION 3 — muddy city MST
+  function mstActivity(host){
+    thinkStep(host,"點兩棟房子之間的路來「鋪石板」。目標：讓 6 戶全部連通，而且石板總數越少越好。");
+    var nodes=[{x:90,y:70,n:"A"},{x:300,y:55,n:"B"},{x:470,y:95,n:"C"},
+               {x:80,y:250,n:"D"},{x:295,y:275,n:"E"},{x:470,y:245,n:"F"}];
+    var edges=[ [0,1,7],[0,3,5],[1,2,8],[1,3,9],[1,4,7],[2,5,5],[4,5,8],[2,4,5],[3,4,15] ];
+    var MIN=29;
+    var on=edges.map(function(){return false;});
+    var NS="http://www.w3.org/2000/svg";
+    var svg=document.createElementNS(NS,"svg");
+    svg.setAttribute("viewBox","0 0 560 330"); svg.setAttribute("width","100%"); svg.style.maxWidth="560px";
+    var wrap=el("div","hpv-lab-graphwrap"); wrap.appendChild(svg); host.appendChild(wrap);
+    var total=el("div","hpv-lab-counter");
+    var nodeEls=[];
+    function find(p,x){ while(p[x]!==x)x=p[x]; return x; }
+    function comps(){ var p=[0,1,2,3,4,5]; edges.forEach(function(e,i){ if(on[i]){ var ra=find(p,e[0]),rb=find(p,e[1]); if(ra!==rb)p[ra]=rb; } });
+      var root=find(p,0), conn=0, iso=[]; for(var k=0;k<6;k++){ if(find(p,k)===root) conn++; else iso.push(k); } return {connected:conn, iso:iso}; }
+    function clearIso(){ nodeEls.forEach(function(c){ c.classList.remove("isolated"); }); }
+    function refreshTotal(){ var t=0; edges.forEach(function(e,i){ if(on[i]) t+=e[2]; });
+      total.innerHTML="已連通 <b>"+comps().connected+"</b> / 6 戶　·　已鋪石板 <b>"+t+"</b> 塊"; }
+    edges.forEach(function(e,i){
+      var a=nodes[e[0]], b=nodes[e[1]];
+      var line=document.createElementNS(NS,"line");
+      line.setAttribute("x1",a.x); line.setAttribute("y1",a.y); line.setAttribute("x2",b.x); line.setAttribute("y2",b.y);
+      line.setAttribute("class","hpv-lab-edge");
+      line.addEventListener("click",function(){ on[i]=!on[i]; line.classList.toggle("on",on[i]); clearIso(); refreshTotal(); fb.className="hpv-lab-fb"; });
+      svg.appendChild(line);
+      var tx=document.createElementNS(NS,"text");
+      tx.setAttribute("x",(a.x+b.x)/2+4); tx.setAttribute("y",(a.y+b.y)/2-4);
+      tx.setAttribute("class","hpv-lab-elabel"); tx.textContent=e[2];
+      svg.appendChild(tx);
+    });
+    nodes.forEach(function(nd){
+      var c=document.createElementNS(NS,"circle");
+      c.setAttribute("cx",nd.x); c.setAttribute("cy",nd.y); c.setAttribute("r",20); c.setAttribute("class","hpv-lab-node");
+      svg.appendChild(c); nodeEls.push(c);
+      var t=document.createElementNS(NS,"text");
+      t.setAttribute("x",nd.x); t.setAttribute("y",nd.y+5); t.setAttribute("class","hpv-lab-nlabel"); t.textContent=nd.n;
+      svg.appendChild(t);
+    });
+    host.appendChild(total);
+    host.appendChild(el("div","hpv-lab-hint","小撇步：先鋪最短的路；若一條路的兩頭已經連通，就不用再鋪。"));
+    var ctrls=el("div","hpv-lab-controls");
+    var check=el("button","hpv-lab-btn","檢查");
+    var clr=el("button","hpv-lab-btn ghost","全部清除");
+    ctrls.appendChild(check); ctrls.appendChild(clr); host.appendChild(ctrls);
+    var fb=feedback(host);
+    check.addEventListener("click",function(){
+      var t=0,cnt=0; edges.forEach(function(e,i){ if(on[i]){ cnt++; t+=e[2]; } });
+      var c=comps(); clearIso();
+      if(c.connected<6){ c.iso.forEach(function(k){ nodeEls[k].classList.add("isolated"); });
+        setFb(fb,"no","✗ 還有房子沒連到（紅圈處）。幫它們各鋪一條路接上來。"); return; }
+      if(t===MIN && cnt===5){ setFb(fb,"ok","✓ 最省解！總石板 "+t+" 塊，剛好 5 條路連通 6 戶，這就是最小生成樹。"); }
+      else if(t===MIN){ setFb(fb,"ok","✓ 總數已是最省（"+t+" 塊）。"); }
+      else { setFb(fb,"no","已全部連通，但還能更省（目前 "+t+" 塊，最省是 "+MIN+"）。試著移除多餘的路。"); }
+    });
+    clr.addEventListener("click",function(){ on=edges.map(function(){return false;});
+      svg.querySelectorAll(".hpv-lab-edge").forEach(function(l){l.classList.remove("on");});
+      clearIso(); refreshTotal(); fb.className="hpv-lab-fb"; });
+    refreshTotal();
+  }
+
+  // STATION 4 — reliable transfer
+  function iotActivity(host){
+    thinkStep(host,"按「送出感測資料」。先在關閉狀態送幾次，再開啟「確認與重送」比較差別。");
+    var pipe=el("div","hpv-lab-pipe");
+    pipe.innerHTML='<div class="hpv-lab-pnode"><div class="hpv-lab-pic">🌡️</div>感測器</div>'+
+                   '<div class="hpv-lab-arrow"></div>'+
+                   '<div class="hpv-lab-pnode"><div class="hpv-lab-pic">📡</div>不穩定通道</div>'+
+                   '<div class="hpv-lab-arrow"></div>'+
+                   '<div class="hpv-lab-pnode"><div class="hpv-lab-pic">☁️</div>雲端</div>';
+    host.appendChild(pipe);
+    var sent=0, recv=0;
+    var stat=el("div","hpv-lab-stat");
+    var bSent=el("b",null,"0"), bRecv=el("b",null,"0");
+    stat.appendChild(document.createTextNode("送出 ")); stat.appendChild(bSent);
+    stat.appendChild(document.createTextNode("　·　雲端收到 ")); stat.appendChild(bRecv);
+    host.appendChild(stat);
+    var chips=el("div","hpv-lab-chips"); host.appendChild(chips);
+    function pushChip(ok){ var ch=el("span","hpv-lab-chip "+(ok?"ok":"no"), ok?"✓":"✗");
+      chips.appendChild(ch); while(chips.children.length>12) chips.removeChild(chips.firstChild); }
+    var ctrls=el("div","hpv-lab-controls");
+    var rel=el("label"); rel.style.cssText="display:flex;align-items:center;gap:8px;font-weight:700;color:#29297A;cursor:pointer;";
+    var relcb=el("input"); relcb.type="checkbox"; relcb.style.cssText="width:18px;height:18px;accent-color:#29297A;cursor:pointer;";
+    rel.appendChild(relcb); rel.appendChild(document.createTextNode("啟用「確認與重送」協定"));
+    var send=el("button","hpv-lab-btn","送出感測資料");
+    var rs=el("button","hpv-lab-btn ghost","歸零");
+    ctrls.appendChild(send); ctrls.appendChild(rel); ctrls.appendChild(rs);
+    host.appendChild(ctrls);
+    var fb=feedback(host);
+    function upd(){ bSent.textContent=sent; bRecv.textContent=recv; }
+    send.addEventListener("click",function(){
+      sent++;
+      if(relcb.checked){ recv++; pushChip(true); setFb(fb,"ok","✓ 通道掉了封包也沒關係——協定自動重送，雲端最終收到。送達率 100%。"); }
+      else { var ok=Math.random()>0.4; if(ok){ recv++; pushChip(true); setFb(fb,"info","這次送達了。但沒有重送機制，遲早會掉資料。"); }
+             else { pushChip(false); setFb(fb,"no","✗ 封包在通道中遺失，雲端沒收到。沒有確認機制就無法察覺。"); } }
+      upd();
+    });
+    rs.addEventListener("click",function(){ sent=0; recv=0; chips.innerHTML=""; upd(); fb.className="hpv-lab-fb"; });
+    host.appendChild(el("div","hpv-lab-hint","玩法：先在「關閉」狀態連按幾次，會看到有些 ✗（掉封包）；再勾「確認與重送」，就全部變 ✓。"));
+    upd();
+  }
+
+  // STATION 5 — parity error detection
+  function parityActivity(host){
+    thinkStep(host,"玩法三步：①按「產生校驗卡」　②按「電腦偷翻一張」　③點你覺得被翻的那一格。原理：被翻的格會讓它那一列、那一行的黑格數變成奇數。");
+    var size=5, full=size+1;
+    var grid=[]; var flipped=null; var guess=null; var gridEl=el("div","hpv-lab-grid");
+    gridEl.style.gridTemplateColumns="repeat("+full+",34px)";
+    function build(){
+      grid=[]; flipped=null; guess=null;
+      for(var r=0;r<size;r++){ var row=[]; for(var c=0;c<size;c++) row.push(rnd(2)); grid.push(row); }
+      // col parity (last col): make each row even
+      for(var r2=0;r2<size;r2++){ var s=0; for(var c2=0;c2<size;c2++) s+=grid[r2][c2]; grid[r2].push(s%2); }
+      // row parity (last row): make each col even
+      var last=[]; for(var c3=0;c3<full;c3++){ var s2=0; for(var r3=0;r3<size;r3++) s2+=grid[r3][c3]; last.push(s2%2); }
+      grid.push(last);
+      render();
+    }
+    function render(){
+      gridEl.innerHTML="";
+      for(var r=0;r<full;r++) for(var c=0;c<full;c++){(function(r,c){
+        var cell=el("div","hpv-lab-cell "+(grid[r][c]? "b":"w"));
+        if(r===size||c===size) cell.classList.add("parity");
+        if(guess && guess[0]===r && guess[1]===c) cell.classList.add("guess");
+        cell.addEventListener("click",function(){
+          if(flipped){ guess=[r,c]; render(); checkGuess(); }
+        });
+        gridEl.appendChild(cell);
+      })(r,c);}
+    }
+    host.appendChild(gridEl);
+    var ctrls=el("div","hpv-lab-controls");
+    var gen=el("button","hpv-lab-btn","產生校驗卡");
+    var flip=el("button","hpv-lab-btn ghost","電腦偷翻一張");
+    ctrls.appendChild(gen); ctrls.appendChild(flip); host.appendChild(ctrls);
+    var fb=feedback(host);
+    setFb(fb,"info","① 先按「產生校驗卡」。");
+    gen.addEventListener("click",function(){ build(); setFb(fb,"info","② 校驗卡已產生（每行每列黑格數都是偶數）。現在按「電腦偷翻一張」。"); });
+    flip.addEventListener("click",function(){
+      if(grid.length===0){ setFb(fb,"info","請先按『產生校驗卡』。"); return; }
+      var r=rnd(full), c=rnd(full); grid[r][c]=grid[r][c]?0:1; flipped=[r,c]; guess=null; render();
+      setFb(fb,"info","電腦偷翻了一張卡。點你認為被翻的那一格。");
+    });
+    function checkGuess(){
+      // detect via parity
+      var badRow=-1, badCol=-1;
+      for(var r=0;r<full;r++){ var s=0; for(var c=0;c<full;c++) s+=grid[r][c]; if(s%2===1) badRow=r; }
+      for(var c2=0;c2<full;c2++){ var s2=0; for(var r2=0;r2<full;r2++) s2+=grid[r2][c2]; if(s2%2===1) badCol=c2; }
+      var cells=gridEl.children;
+      function mark(r,c){ cells[r*full+c].classList.add("reveal"); }
+      if(badRow>=0 && badCol>=0) mark(badRow,badCol);
+      if(guess[0]===flipped[0] && guess[1]===flipped[1]){
+        setFb(fb,"ok","✓ 答對了！第 "+(badRow+1)+" 列與第 "+(badCol+1)+" 行的奇偶性壞掉，交叉點就是被翻的格子。");
+      } else {
+        setFb(fb,"no","✗ 不是這格。看哪一列、哪一行的黑格變成奇數（綠框處），交叉點才是答案。");
+      }
+    }
+    host.appendChild(el("div","hpv-lab-hint","原理：被翻的格子會讓它所在的那一列和那一行同時變成『奇數』，兩者交叉就定位出錯誤。"));
+  }
+
+  // ── render stations ──────────────────────────────────────────
+  for(var s=0;s<N;s++){ var node=buildStation(s); stationEls.push(node); root.appendChild(node); }
+
+  var doneBox=el("div","hpv-lab-done","🎓 五站完成！你已親手走過硬體、軟體、網路、物聯網與線上評量的核心概念。");
+  root.appendChild(doneBox);
+
+  var foot=el("div","hpv-lab-foot",
+    "教材改編自《不插電的資訊科學》CS Unplugged 中文版　·　原著 Tim Bell、Ian H. Witten、Mike Fellows　·　中華民國軟體自由協會編譯<br>"+
+    "本模組依 CC BY-NC-SA 授權，僅供課堂等非商業用途　·　©csunplugged.org");
+  root.appendChild(foot);
+
+  // ── 進度還原 / 對外 API（供平台整合 ccResume 續學；standalone 無 hook 時略過）──
+  function applyState(saved){
+    if(saved && typeof saved==="object"){
+      state.unlocked = Math.max(0, Math.min((saved.unlocked|0), N-1));
+      state.done = [];
+      for(var i=0;i<N;i++){ state.done[i] = !!(saved.done && saved.done[i]); }
+      state.passes = saved.passes|0;
+    }
+    for(var j=0;j<N;j++){ var cb=document.getElementById("hpv-lab-gate-"+j); if(cb) cb.checked = !!state.done[j]; }
+    refreshLocks(); refreshProgress(); refreshBadge();
+    doneBox.style.display = (doneCount()>=N)? "block":"none";
+  }
+  window.__ccLab = { count:N, stations:CC_LAB_CONFIG.stations, sectionEls:stationEls,
+                     getDoneCount:doneCount, getFirstUndone:firstUndone, getPasses:function(){return state.passes;} };
+  if(typeof window.__ccLabRestore==="function"){ applyState(window.__ccLabRestore()); }
+  else { refreshLocks(); refreshProgress(); refreshBadge(); }
+
+  if(window.ccResume && typeof window.ccResume.render==="function") window.ccResume.render();
+})();
+</script>
 </body>
 </html>
