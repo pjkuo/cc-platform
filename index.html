@@ -4605,6 +4605,9 @@ function makeTrouble(mountId, bank){
    +'<line x1="360" y1="62" x2="360" y2="96" stroke="#4a90d9" stroke-width="2.2" stroke-dasharray="5 5"/>'
    +'</svg>';
 
+  /* ---------- 五大主軸影音設定（教師可填入各主軸影片網址；留空顯示提示） ---------- */
+  var OSV={hardware:"",software:"",networking:"",iot:"",assessment:""};
+  function ovBtn(k,label){ return OSV[k] ? ('<a class="cco-b primary" href="'+OSV[k]+'" target="_blank" rel="noopener">▶ 觀看'+label+'影音</a>') : ('<span class="cco-b" style="opacity:.7;cursor:default">🎬 '+label+'影音（待設定）</span>'); }
   /* ---------- 投影片內容 ---------- */
   var slides=[
    {cover:1,eb:"計算機概論 · 第一堂課",t:'歡迎！這是<span class="u">你的</span>第一堂課',
@@ -4725,6 +4728,70 @@ function makeTrouble(mountId, bank){
      +'<div class="cco-card"><span class="n">03</span><h4>整合落地</h4><p>把工具串成真正能用的成果。</p></div></div>'
      +'<p class="cco-lead">把這三件練好，你在<b>哪個時代都不會被取代</b>。</p>',
     say:"具體要練三件事。第一，問對問題，把模糊的需求講清楚。第二，驗證判斷，檢查 AI 給的對不對。第三，整合落地，把工具串成真正能用的成果。把這三件練好，你在哪個時代都不會被取代。"},
+
+   {eb:"課程內容 · 五大主軸",t:'這學期，我們會走過<span class="u">五大主軸</span>',
+    html:'<div class="cco-grid c3">'
+     +'<div class="cco-card hw"><span class="ic">🖥</span><h4>① 硬體</h4><p>電腦如何完成運算</p></div>'
+     +'<div class="cco-card sw"><span class="ic">💿</span><h4>② 軟體</h4><p>指揮硬體的大腦</p></div>'
+     +'<div class="cco-card nw"><span class="ic">🌐</span><h4>③ 網路</h4><p>資料如何流動</p></div>'
+     +'<div class="cco-card"><span class="ic">📡</span><h4>④ 物聯網</h4><p>萬物相連</p></div>'
+     +'<div class="cco-card"><span class="ic">📝</span><h4>⑤ 線上評量</h4><p>先思考後驗證</p></div></div>'
+     +'<p class="cco-lead">接下來，我用一兩分鐘，帶你快速看過這五個主軸各在學什麼。</p>',
+    say:"認識完路線，我帶你快速看過這學期的五大主軸：硬體、軟體、網路、物聯網，還有線上評量。每一個我都講重點，你先有個印象，之後上課就會越來越清楚。"},
+
+   {eb:"五大主軸 · ① 硬體",t:'硬體 Hardware：<span class="u">電腦如何完成運算</span>',
+    html:'<p class="cco-lead">硬體是電腦看得見、摸得到的實體零件，負責真正把運算做出來。</p>'
+     +'<ul class="cco-list"><li><b>四大件</b>：處理器 CPU、記憶體、儲存、輸入/輸出，以匯流排相連</li>'
+     +'<li><b>0 與 1</b>：一個位元 bit，8 位元＝1 位元組 byte；歌、圖、網址都是一長串 0 與 1</li>'
+     +'<li><b>抽象層級</b>：問題 → 演算法 → 高階語言 → 組合語言 → 機器碼 → 電晶體</li>'
+     +'<li><b>記憶體階層</b>：暫存器 ＞ 快取 ＞ 主記憶體 ＞ 磁碟，越上面越快、越小、越貴</li></ul>'
+     +'<p class="cco-lead" style="color:#9fb6c6;font-size:14.5px">🍽 白話比喻：電腦像餐廳——CPU 是廚師、記憶體是料理檯、硬碟是倉庫、輸入/輸出是服務生。</p>'
+     +'<div class="cco-cta">'+ovBtn("hardware","硬體")
+     +'<a class="cco-b" href="https://openstax.org/r/76DecimalBinary" target="_blank" rel="noopener">十進位↔二進位 ↗</a>'
+     +'<a class="cco-b" href="https://pjkuo.github.io/cc-platform" target="_blank" rel="noopener">前往硬體實作 ↗</a></div>',
+    say:"第一個主軸是硬體。硬體就是電腦看得見、摸得到的零件，負責真正把運算做出來。它有四大件：處理器、記憶體、儲存，還有輸入輸出，靠匯流排連在一起。電腦只認得 0 和 1，所有歌、圖、文字，都是一長串的 0 和 1。你可以把電腦想成一間餐廳：處理器是廚師，記憶體是料理檯，硬碟是倉庫。"},
+
+   {eb:"五大主軸 · ② 軟體",t:'軟體 Software：<span class="u">指揮硬體的大腦</span>',
+    html:'<p class="cco-lead">軟體是看不到的程式與指令，負責告訴硬體該做什麼。</p>'
+     +'<ul class="cco-list"><li><b>作業系統</b>：唯一能直接控制硬體的軟體，兼顧安全與可靠</li>'
+     +'<li><b>核心工作</b>：行程、排程、虛擬記憶體、檔案系統</li>'
+     +'<li><b>高階語言</b>：用接近自然語言寫程式，再由編譯器翻成 0 與 1；依用途選語言</li></ul>'
+     +'<p class="cco-lead" style="color:#9fb6c6;font-size:14.5px">🏨 白話比喻：作業系統像飯店總管，房客（程式）想用硬體都先告訴總管，統一調度避免衝突。</p>'
+     +'<div class="cco-cta">'+ovBtn("software","軟體")
+     +'<a class="cco-b" href="https://openstax.org/r/76opsys" target="_blank" rel="noopener">作業系統概念 ↗</a>'
+     +'<a class="cco-b" href="https://pjkuo.github.io/cc-platform" target="_blank" rel="noopener">前往軟體實作 ↗</a></div>',
+    say:"第二個主軸是軟體。軟體是看不到的程式和指令，負責告訴硬體該做什麼。其中最重要的是作業系統，它是唯一能直接控制硬體的軟體，幫所有程式管理資源。寫程式時我們用高階語言，像 Python，再由編譯器翻成電腦看得懂的 0 和 1。作業系統就像飯店總管，幫大家統一調度。"},
+
+   {eb:"五大主軸 · ③ 網路",t:'網路 Networking：<span class="u">資料如何流動</span>',
+    html:'<p class="cco-lead">網路讓許多電腦連在一起，彼此分享資訊。</p>'
+     +'<ul class="cco-list"><li><b>網際網路</b>：「網路中的網路」，由許多小網路串接而成</li>'
+     +'<li><b>邊緣與核心</b>：邊緣是你的裝置；核心負責交換與路由；Client 請求、Server 服務</li>'
+     +'<li><b>封包與協定</b>：資料拆成小封包各走各路；協定是共同規則（TCP/IP…）</li>'
+     +'<li><b>效能</b>：頻寬＝每秒能傳多少；延遲＝資料要花多久</li></ul>'
+     +'<p class="cco-lead" style="color:#9fb6c6;font-size:14.5px">✉️ 白話比喻：像寄長信——拆成多張明信片（封包）各走郵路，地址是 IP，收件端再拼回。</p>'
+     +'<div class="cco-cta">'+ovBtn("networking","網路")
+     +'<a class="cco-b" href="https://pjkuo.github.io/cc-platform" target="_blank" rel="noopener">封包流動模擬 ↗</a></div>',
+    say:"第三個主軸是網路。網路讓許多電腦連在一起分享資訊；我們常用的網際網路，其實是網路中的網路。資料在傳的時候會被拆成一個個小封包，各走各的路，到了目的地再拼回來。這就像把一封長信拆成好幾張明信片寄出，最後在收件人那裡組合起來。"},
+
+   {eb:"五大主軸 · ④ 物聯網",t:'物聯網 IoT：<span class="u">萬物相連</span>',
+    html:'<p class="cco-lead">物聯網讓「萬物」都能連網、互相溝通，不只是電腦和手機。</p>'
+     +'<ul class="cco-list"><li><b>無線技術</b>：藍牙（短距）、Wi-Fi（區域）、4G/5G（行動）</li>'
+     +'<li><b>分散式系統</b>：程式散布在多台機器協同合作，更有彈性、更耐故障</li>'
+     +'<li><b>IANS</b>：智慧自主網路超級系統——自主機器串連協作、共同決策</li></ul>'
+     +'<p class="cco-lead" style="color:#9fb6c6;font-size:14.5px">📡 白話比喻：家裡的燈、冷氣、門鎖、手錶，像會用無線對講機通話的小幫手，再配上會學習的大腦。</p>'
+     +'<div class="cco-cta">'+ovBtn("iot","物聯網")
+     +'<a class="cco-b" href="https://openstax.org/r/76MachineLearn" target="_blank" rel="noopener">機器學習與自主系統 ↗</a></div>',
+    say:"第四個主軸是物聯網。物聯網讓萬物都能連網、互相溝通，靠的是藍牙、Wi-Fi、還有 5G 這些無線技術。許多裝置分散在不同地方一起合作，就成了分散式系統。再往前走，就是讓機器自己協作、共同決策的智慧自主系統。想像家裡的燈、冷氣、門鎖，都像會用對講機通話的小幫手。"},
+
+   {eb:"五大主軸 · ⑤ 線上評量",t:'線上評量 Assessment：<span class="u">先思考，後驗證</span>',
+    html:'<p class="cco-lead">動手闖關，即時驗證自己學到的觀念——這正是「後驗證」的關鍵一步。</p>'
+     +'<ul class="cco-list"><li><b>五站闖關</b>：硬體、軟體、網路、物聯網、AI 各一站，逐站確認過關</li>'
+     +'<li><b>評量循環</b>：先思考預測 → 平台驗證 → 看到回饋 → 修正理解 → 再前進</li>'
+     +'<li><b>即時回饋</b>：答題後立即知道對錯與說明，把「以為懂」變成「真的懂」</li></ul>'
+     +'<p class="cco-lead" style="color:#9fb6c6;font-size:14.5px">🎮 白話比喻：闖關就像遊戲存檔點，每過一關代表一個觀念真的學會了。</p>'
+     +'<div class="cco-cta">'+ovBtn("assessment","評量")
+     +'<a class="cco-b" href="https://pjkuo.github.io/AICT-assess-platform" target="_blank" rel="noopener">線上評量平台 ↗</a></div>',
+    say:"第五個主軸是線上評量。學完之後，要動手闖關，馬上驗證自己是不是真的懂了，這就是先思考、後驗證。平台有五站闖關，硬體、軟體、網路、物聯網、還有 AI 各一站；答完題會立刻給你回饋，讓你把以為懂變成真的懂。闖關就像遊戲的存檔點，每過一關，就代表你又紮實學會了一個觀念。"},
 
    {eb:"收尾 · 現在就開始",t:"第一堂課，現在就動手",
     html:'<p class="cco-quote">AI 越強，<span class="u">會判斷的人越值錢</span>。</p>'
