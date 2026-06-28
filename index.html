@@ -5751,5 +5751,1229 @@ function makeTrouble(mountId, bank){
   if(window.ccResume && typeof window.ccResume.render==="function") window.ccResume.render();
 })();
 </script>
+
+<!-- ===================================================================
+     PC 積木組裝實習（拖放遊戲）— 附加模組  append-only / 前綴 .pcb- / 具冪等防護
+     整合自「PC 裝機虛擬實驗室」，升級為拖曳積木式互動遊戲，嵌入計算機概論模擬平台
+     ©2025 郭博仁 · CC BY-NC-SA 4.0
+=================================================================== -->
+<style id="pcb-style">
+#pcb-root{
+  --pcb-ink:#0d141c; --pcb-bench:#131c26; --pcb-bench2:#0c141b;
+  --pcb-muted:#5b6b7a; --pcb-line:#dfe5ec; --pcb-card:#fff;
+  --pcb-accent:#16b8c4; --pcb-accent-d:#0e8a93; --pcb-pcb:#1f7a52;
+  --pcb-signal:#f0a500; --pcb-copper:#c8803c; --pcb-good:#2fbf71; --pcb-bad:#e0533d;
+  --signal:#f0a500; --accent:#16b8c4; --good:#2fbf71;
+  --pcb-mono:ui-monospace,"SFMono-Regular",Consolas,Menlo,monospace;
+  --pcb-cjk:"Noto Sans TC","Microsoft JhengHei","PingFang TC","Heiti TC",sans-serif;
+  font-family:var(--pcb-cjk); color:var(--pcb-ink); line-height:1.6;
+  -webkit-font-smoothing:antialiased; max-width:1180px; margin:0 auto; padding:4px 0 70px;
+}
+#pcb-root *{box-sizing:border-box}
+
+/* 標題 + 儀表 */
+#pcb-root .pcb-eyebrow{font-size:13px;letter-spacing:.2em;color:var(--pcb-accent-d);font-weight:800}
+#pcb-root .pcb-h1{font-size:30px;font-weight:900;color:var(--pcb-ink);margin:5px 0 3px;line-height:1.2}
+#pcb-root .pcb-sub{color:var(--pcb-muted);font-size:14.5px;font-weight:600;margin-bottom:14px}
+#pcb-root .pcb-gauges{display:flex;flex-wrap:wrap;gap:10px;background:var(--pcb-ink);border-radius:14px;padding:12px 14px;margin-bottom:14px}
+#pcb-root .pcb-gauge{background:#0a1015;border:1px solid #22303d;border-radius:11px;padding:7px 13px;min-width:92px;text-align:center;flex:1}
+#pcb-root .pcb-gauge .lab{font-family:var(--pcb-mono);font-size:9.5px;letter-spacing:1.4px;color:#6e8294;text-transform:uppercase}
+#pcb-root .pcb-gauge .val{font-family:var(--pcb-mono);font-size:20px;font-weight:700;color:#eaf1f6;margin-top:2px}
+#pcb-root .pcb-gauge.good .val{color:var(--pcb-good)} #pcb-root .pcb-gauge.warn .val{color:var(--pcb-signal)}
+#pcb-root .pcb-progline{height:8px;border-radius:99px;background:#13202b;overflow:hidden;margin-top:2px}
+#pcb-root .pcb-progfill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--pcb-accent),var(--pcb-good));transition:width .45s ease}
+
+/* 版面 */
+#pcb-root .pcb-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px}
+@media(max-width:900px){#pcb-root .pcb-grid{grid-template-columns:1fr}}
+
+/* 機殼舞台 */
+#pcb-root .pcb-stage{background:var(--pcb-bench);border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,20,28,.10);position:relative}
+#pcb-root .pcb-stage-top{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #1f2c38;color:#9fb1c1;font-family:var(--pcb-mono);font-size:11px;letter-spacing:1px}
+#pcb-root .pcb-stage-inner{position:relative}
+#pcb-root .pcb-stage svg{display:block;width:100%;height:auto}
+#pcb-root .pcb-lbl{font-family:var(--pcb-mono);font-size:10px;fill:#bcd0c5;letter-spacing:.4px}
+#pcb-root .pcb-comp{opacity:0;transition:opacity .5s ease,transform .5s ease;transform:translateY(10px)}
+#pcb-root .pcb-comp.pcb-on{opacity:1;transform:none}
+#pcb-root #pcb-sidepanel{transition:opacity .55s ease}
+#pcb-root #pcb-sidepanel.opened{opacity:0;pointer-events:none}
+#pcb-root .pcb-shake{animation:pcb-shake .42s}
+@keyframes pcb-shake{10%,90%{transform:translateX(-1px)}30%,70%{transform:translateX(3px)}50%{transform:translateX(-5px)}}
+
+/* 落點覆蓋層（對齊 SVG viewBox） */
+#pcb-root .pcb-zones{position:absolute;inset:0;pointer-events:none}
+#pcb-root .pcb-zone{position:absolute;border-radius:10px;border:2.5px dashed transparent;display:flex;align-items:center;justify-content:center;text-align:center;color:#cdeef1;font:700 12px var(--pcb-cjk);transition:background .15s}
+#pcb-root .pcb-zone.armed{pointer-events:auto;border-color:var(--pcb-accent);background:rgba(22,184,196,.10);animation:pcb-pulse 1.3s ease-in-out infinite}
+#pcb-root .pcb-zone.armed .pcb-ztag{background:rgba(8,18,24,.78);padding:4px 9px;border-radius:99px;border:1px solid var(--pcb-accent)}
+#pcb-root .pcb-zone.hover{background:rgba(22,184,196,.28);border-style:solid}
+@keyframes pcb-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+#pcb-root .pcb-snap{position:absolute;width:54px;height:54px;border-radius:50%;border:3px solid var(--pcb-good);transform:translate(-50%,-50%) scale(.2);opacity:0;pointer-events:none}
+#pcb-root .pcb-snap.go{animation:pcb-snap .6s ease-out forwards}
+@keyframes pcb-snap{0%{opacity:1;transform:translate(-50%,-50%) scale(.2)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}}
+
+/* 右欄 */
+#pcb-root .pcb-col{display:flex;flex-direction:column;gap:14px}
+#pcb-root .pcb-panel{background:var(--pcb-card);border:1px solid var(--pcb-line);border-radius:16px;box-shadow:0 2px 10px rgba(20,40,70,.05)}
+#pcb-root .pcb-phead{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--pcb-line)}
+#pcb-root .pcb-phead .idx{font-family:var(--pcb-mono);font-size:12px;font-weight:700;color:#fff;background:var(--pcb-ink);border-radius:7px;padding:4px 9px}
+#pcb-root .pcb-phead h3{margin:0;font-size:15px}
+#pcb-root .pcb-pbody{padding:14px 16px}
+#pcb-root .pcb-stepname{font-size:17px;font-weight:800;margin:0 0 6px}
+#pcb-root .pcb-why{font-size:13.5px;color:#33414e;background:#f0f8f9;border-left:3px solid var(--pcb-accent);padding:9px 12px;border-radius:0 10px 10px 0;margin:6px 0 0}
+#pcb-root .pcb-why b{color:var(--pcb-accent-d)}
+#pcb-root .pcb-hint{margin-top:10px;font-size:13px;border-radius:10px;padding:9px 12px;display:none}
+#pcb-root .pcb-hint.show{display:block}
+#pcb-root .pcb-hint.bad{background:#fdeee9;color:#a23a26;border:1px solid #f3c9bd}
+#pcb-root .pcb-hint.ok{background:#e9f8ee;color:#1c7a44;border:1px solid #bfe8cd}
+#pcb-root .pcb-think{display:inline-block;font:800 11px var(--pcb-mono);letter-spacing:.1em;color:#fff;background:var(--pcb-accent-d);border-radius:6px;padding:2px 7px;margin-right:6px}
+
+/* 積木托盤 */
+#pcb-root .pcb-traynote{font-size:12.5px;color:var(--pcb-muted);margin:0 0 10px}
+#pcb-root .pcb-tray{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+#pcb-root .pcb-brick{position:relative;display:flex;align-items:center;gap:9px;text-align:left;cursor:grab;
+  background:linear-gradient(#ffffff,#f3f6f8);border:1.5px solid var(--pcb-line);border-bottom-width:4px;border-radius:12px;
+  padding:9px 10px;font:13px var(--pcb-cjk);color:var(--pcb-ink);touch-action:none;user-select:none;
+  transition:transform .06s,border-color .15s,box-shadow .15s}
+#pcb-root .pcb-brick:hover{border-color:#bcc6cf;box-shadow:0 3px 10px rgba(13,20,28,.08)}
+#pcb-root .pcb-brick:active{cursor:grabbing}
+#pcb-root .pcb-brick.next{border-color:var(--pcb-accent);box-shadow:0 0 0 3px rgba(22,184,196,.16)}
+#pcb-root .pcb-brick.sel{border-color:var(--pcb-accent);background:#e9fbfc}
+#pcb-root .pcb-brick.done{opacity:.42;cursor:default;border-bottom-width:1.5px}
+#pcb-root .pcb-brick.done .pcb-ic{filter:grayscale(1)}
+#pcb-root .pcb-brick.dragging{opacity:.32}
+#pcb-root .pcb-ic{width:30px;height:30px;border-radius:8px;flex:0 0 30px;display:grid;place-items:center;font-size:17px;color:#fff}
+#pcb-root .pcb-bn{line-height:1.18;font-weight:700}
+#pcb-root .pcb-bn .en{display:block;font:9.5px var(--pcb-mono);color:var(--pcb-muted);letter-spacing:.3px;font-weight:400}
+#pcb-root .pcb-doneflag{position:absolute;top:6px;right:8px;color:var(--pcb-good);font-weight:800;font-size:13px}
+#pcb-root .pcb-ghost{position:fixed;z-index:9999;pointer-events:none;transform:translate(-50%,-50%) rotate(-4deg) scale(1.06);
+  box-shadow:0 12px 30px rgba(8,13,18,.35);border-radius:12px;opacity:.96}
+
+/* 控制 / 助教 */
+#pcb-root .pcb-ctrls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+#pcb-root .pcb-btn{border:none;border-radius:11px;padding:9px 15px;font:700 14px var(--pcb-cjk);cursor:pointer}
+#pcb-root .pcb-btn.ghost{background:#fff;border:1.5px solid var(--pcb-line);color:#33414e}
+#pcb-root .pcb-btn.ghost:hover{border-color:#bcc6cf}
+#pcb-root .pcb-btn.dark{background:var(--pcb-ink);color:#fff}#pcb-root .pcb-btn.dark:hover{background:#1d2a36}
+#pcb-root .pcb-btn.cyan{background:var(--pcb-accent-d);color:#fff}
+#pcb-root .pcb-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+#pcb-root .pcb-chip{font-size:12px;border:1px solid var(--pcb-line);background:#fff;border-radius:99px;padding:5px 11px;cursor:pointer;color:#33414e}
+#pcb-root .pcb-chip:hover{border-color:var(--pcb-accent);color:var(--pcb-accent-d)}
+#pcb-root .pcb-answer{font-size:13.5px;background:#f7f9fb;border:1px solid var(--pcb-line);border-radius:11px;padding:11px 13px;min-height:44px;color:#2b3741}
+#pcb-root .pcb-answer .qa{font-weight:700;color:var(--pcb-ink);margin-bottom:4px}
+#pcb-root .pcb-askrow{display:flex;gap:8px;margin-top:10px}
+#pcb-root .pcb-askrow input{flex:1;border:1.5px solid var(--pcb-line);border-radius:10px;padding:9px 11px;font:inherit}
+#pcb-root .pcb-askrow input:focus{outline:none;border-color:var(--pcb-accent)}
+#pcb-root .pcb-foot{margin-top:20px;text-align:center;font:11.5px var(--pcb-mono);color:var(--pcb-muted)}
+
+/* 完成 / 測驗 modal */
+#pcb-mask{position:fixed;inset:0;background:rgba(8,13,18,.62);display:none;align-items:center;justify-content:center;padding:18px;z-index:9000}
+#pcb-mask.show{display:flex}
+#pcb-mask .pcb-modal{background:#fff;border-radius:18px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.4);font-family:var(--pcb-cjk,"Microsoft JhengHei",sans-serif)}
+#pcb-mask .mhead{padding:17px 20px;border-bottom:1px solid #dfe5ec;display:flex;align-items:center;gap:10px}
+#pcb-mask .mhead .idx{font:700 12px ui-monospace,monospace;background:#16b8c4;color:#fff;border-radius:7px;padding:4px 9px}
+#pcb-mask .mhead h3{margin:0;font-size:16px;color:#0d141c}
+#pcb-mask .mbody{padding:18px 20px;color:#0d141c}
+#pcb-mask .q{margin:0 0 16px}
+#pcb-mask .qt{font-weight:700;margin:0 0 8px;font-size:14.5px}
+#pcb-mask .opt{display:block;width:100%;text-align:left;border:1.5px solid #dfe5ec;background:#fbfcfd;border-radius:10px;padding:10px 12px;margin:6px 0;cursor:pointer;font:13.5px var(--pcb-cjk,sans-serif)}
+#pcb-mask .opt:hover{border-color:#bcc6cf}
+#pcb-mask .opt.right{border-color:#2fbf71;background:#e9f8ee}
+#pcb-mask .opt.wrong{border-color:#e0533d;background:#fdeee9}
+#pcb-mask .opt:disabled{cursor:default}
+#pcb-mask .exp{font-size:12.5px;color:#41505c;margin:6px 2px 0;display:none}
+#pcb-mask .exp.show{display:block}
+#pcb-mask .pcb-btn{border:none;border-radius:11px;padding:10px 15px;font:700 14px var(--pcb-cjk,sans-serif);cursor:pointer}
+#pcb-mask .pcb-btn.dark{background:#0d141c;color:#fff}#pcb-mask .pcb-btn.ghost{background:#fff;border:1.5px solid #dfe5ec;color:#33414e}
+#pcb-mask .gradebig{font:800 46px ui-monospace,monospace;text-align:center}
+#pcb-mask .report{font:12.5px/1.7 ui-monospace,monospace;background:#0d141c;color:#d7e2ec;border-radius:12px;padding:14px;white-space:pre-wrap}
+#pcb-mask .name-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+#pcb-mask .name-row input{border:1.5px solid #dfe5ec;border-radius:10px;padding:8px 11px;font:inherit}
+#pcb-mask .name-row label{font-size:12.5px;color:#5b6b7a}
+@media(prefers-reduced-motion:reduce){#pcb-root .pcb-comp{transition:opacity .2s;transform:none}#pcb-root .pcb-zone.armed,#pcb-root .pcb-snap.go,#pcb-root .pcb-shake{animation:none}}
+</style>
+
+<script>
+/* PC 積木組裝實習 — append-only 模組 */
+(function(){
+  "use strict";
+  if (document.getElementById("view-pcbuild")) return;            // 冪等防護
+  var ov = document.getElementById("view-overview");
+  if (!ov || !ov.parentNode) return;                              // 非目標平台 → 安靜跳過
+  var REDUCE = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  function callShow(v){ if(window.__show) window.__show(v);
+    else { document.querySelectorAll(".view").forEach(function(x){x.classList.toggle("active",x.id==="view-"+v);}); window.scrollTo({top:0}); } }
+
+  /* ---------- 資料 ---------- */
+  var STEPS=[
+    {item:"driver",  name:"開啟機殼側板", special:"open", reveal:[], zone:{x:40,y:40,w:740,h:540},
+     why:"裝機<b>第一件事</b>是拆側板，露出主機板托盤與走線空間。先觀察機殼結構與螺絲位置，再開始安裝。"},
+    {item:"standoff",name:"安裝主機板銅柱（Standoff）", reveal:["pcb-g-standoffs"], zone:{x:95,y:100,w:345,h:200},
+     why:"<b>銅柱</b>把主機板墊高、與金屬機殼隔開，避免背面焊點短路；位置必須對應你的板型（ATX）孔位。<b>少鎖或多鎖一根都可能出問題</b>。"},
+    {item:"ioshield",name:"安裝 I/O 擋板（I/O Shield）", reveal:["pcb-g-ioshield"], zone:{x:48,y:105,w:42,h:160},
+     why:"I/O Shield 一定要在<b>放主機板之前</b>從機殼<b>內側</b>卡入。裝完主機板才發現忘了它，就得整片拆下來重來。"},
+    {item:"mobo",    name:"安裝主機板並鎖上螺絲", reveal:["pcb-g-mobo"], zone:{x:95,y:300,w:345,h:180},
+     why:"對齊後方 I/O 接口與 I/O Shield，把主機板放上銅柱，<b>對角線順序</b>輕鎖螺絲（不要一次鎖死），避免板子受力不均裂開。"},
+    {item:"cpu",     name:"安裝 CPU（對齊三角標記）", reveal:["pcb-g-cpu"], zone:{x:198,y:150,w:78,h:78},
+     why:"CPU 角落的<b>金色三角</b>要對準插槽的三角記號，方向只有一個。切勿硬壓——Intel 是<b>針在主機板</b>、AMD 是<b>針在 CPU</b>，弄歪針腳幾乎報廢。"},
+    {item:"paste",   name:"塗散熱膏", reveal:["pcb-g-paste"], zone:{x:212,y:164,w:50,h:50},
+     why:"在 CPU 中央點上<b>約一顆米粒</b>的散熱膏即可，靠散熱器壓力自然攤平。塗太多會溢出、塗太少會過熱，兩者都不好。"},
+    {item:"cooler",  name:"安裝 CPU 散熱器", reveal:["pcb-g-cooler"], zone:{x:186,y:138,w:102,h:102},
+     why:"散熱器底座壓上散熱膏，以<b>對角交叉</b>方式均勻鎖緊，最後把風扇電源接到主機板 <b>CPU_FAN</b> 針腳，否則開機可能因偵測不到風扇而停機。"},
+    {item:"ram",     name:"安裝記憶體（RAM，雙通道）", reveal:["pcb-g-ram"], zone:{x:330,y:138,w:42,h:195},
+     why:"兩條記憶體要插在<b>同色／間隔</b>插槽（常是 A2、B2）以啟用<b>雙通道</b>頻寬。聽到「喀」一聲、卡榫扣上才算到位。"},
+    {item:"ssd",     name:"安裝 M.2 SSD", reveal:["pcb-g-ssd"], zone:{x:150,y:344,w:170,h:24},
+     why:"M.2 以<b>約 30 度斜插</b>入槽，再壓平用螺絲（或卡扣）固定。它走 PCIe 通道，速度遠快於 2.5\" SATA。"},
+    {item:"gpu",     name:"安裝顯示卡（GPU）", reveal:["pcb-g-gpu"], zone:{x:108,y:394,w:300,h:30},
+     why:"對準最上方 <b>PCIe x16</b> 長插槽，平均施力壓到卡榫扣住，再鎖機殼擋板螺絲。別忘了它通常還要<b>另接電源線</b>。"},
+    {item:"psu",     name:"安裝電源供應器（PSU）", reveal:["pcb-g-psu"], zone:{x:60,y:500,w:230,h:78},
+     why:"PSU 鎖在機殼底部，風扇朝向有通風孔的一面。先固定它，等下才能把各路電源線拉到主機板與顯卡。"},
+    {item:"cables",  name:"連接線材（ATX/CPU/SATA/前面板）", reveal:["pcb-g-cables"], zone:{x:300,y:300,w:240,h:230},
+     why:"四大線路：<b>ATX 24-pin</b>（主機板主電源）、<b>CPU 8-pin</b>（CPU 供電）、<b>SATA</b>（硬碟）、<b>前面板</b>（Power SW／LED）。前面板針腳最容易接錯，要對照主機板說明書極性。"},
+    {item:"power",   name:"蓋回側板、開機測試（POST）", special:"close", reveal:["pcb-g-post"], zone:{x:700,y:505,w:90,h:80},
+     why:"最後檢查無鬆動、蓋回側板，按下電源。畫面進入 <b>POST</b>（開機自我檢測）並偵測到 CPU／RAM／GPU，就代表你裝對了！"}
+  ];
+  var PARTS={
+    driver:{nm:"螺絲起子",en:"OPEN PANEL",c:"#6b7785",ic:"🪛"},
+    standoff:{nm:"主機板銅柱",en:"STANDOFF ×7",c:"#c8803c",ic:"🔩"},
+    ioshield:{nm:"I/O 擋板",en:"I/O SHIELD",c:"#8b97a3",ic:"🛡️"},
+    mobo:{nm:"主機板",en:"MOTHERBOARD",c:"#1f7a52",ic:"🟩"},
+    cpu:{nm:"CPU 處理器",en:"CPU",c:"#5a6470",ic:"🔲"},
+    paste:{nm:"散熱膏",en:"THERMAL PASTE",c:"#9aa1a9",ic:"🧴"},
+    cooler:{nm:"CPU 散熱器",en:"COOLER",c:"#3a4654",ic:"🌀"},
+    ram:{nm:"記憶體 RAM",en:"MEMORY ×2",c:"#16b8c4",ic:"📏"},
+    ssd:{nm:"M.2 SSD",en:"NVMe SSD",c:"#2b3340",ic:"💾"},
+    gpu:{nm:"顯示卡 GPU",en:"GRAPHICS",c:"#202732",ic:"🎮"},
+    psu:{nm:"電源供應器",en:"PSU",c:"#171f29",ic:"🔌"},
+    cables:{nm:"線材束",en:"CABLES",c:"#9b8cf0",ic:"🧵"},
+    power:{nm:"電源鍵／蓋板",en:"POWER ON",c:"#2fbf71",ic:"⏻"}
+  };
+  var FAQ=[
+    {q:"CPU 三角標記為什麼要對齊？",a:"CPU 一角有金色三角，插槽對應角落也有三角記號。對齊才能讓針腳與接點一一對應；方向只有一個。若硬塞反方向，會壓歪針腳（Intel 在主機板、AMD 在 CPU），幾乎無法修復。"},
+    {q:"散熱膏塗太多會怎樣？",a:"散熱膏只是填補 CPU 與散熱器之間的微小縫隙，並非越多越好。塗太多會被擠出邊緣、甚至流到插槽周邊（導電型還可能短路）；太少則接觸不良、溫度飆高。中央一顆米粒大小最剛好。"},
+    {q:"銅柱（Standoff）有什麼用？",a:"銅柱把主機板墊高並與金屬機殼隔離，避免背面焊點碰到機殼造成短路，同時提供螺絲鎖點。位置要對應板型孔位：缺一根會不穩，多一根頂在沒有孔的地方也可能短路。"},
+    {q:"I/O Shield 要先裝還是後裝？",a:"一定要在放主機板「之前」，從機殼內側卡入。很多人裝完主機板才想起來，結果得整片拆掉重來，這是最常見的新手失誤之一。"},
+    {q:"RAM 為什麼要插特定插槽？",a:"想啟用雙通道（頻寬加倍），兩條記憶體要插在主機板指定的成對插槽，通常同色或標示 A2、B2。插錯雖能開機，但可能只跑單通道，效能變差。"},
+    {q:"前面板（Front Panel）線怎麼接？",a:"Power SW、Reset SW、Power LED、HDD LED 是最小、最容易接錯的針腳。開關（SW）不分正負，但 LED 分正負極，接反燈不亮。務必對照主機板說明書的 F_PANEL 圖。"},
+    {q:"ATX 24-pin 和 CPU 8-pin 差在哪？",a:"ATX 24-pin 是主機板主電源（供應整體），插在板子邊緣的大接頭；CPU 8-pin（EPS）專門供電給 CPU，插在主機板左上角靠近 CPU 處。兩個都接好機器才會正常開機。"},
+    {q:"開機沒畫面怎麼辦？",a:"先查最常見三點：①RAM 是否真的卡到底、②CPU 8-pin 供電線是否漏接、③螢幕線是否插在「顯示卡」而非主機板內顯接口。再不行就拔到只剩 CPU＋一條 RAM 最小化測試。"}
+  ];
+  var QUIZ=[
+    {qt:"安裝主機板「之前」，下列哪一步絕對不能漏？",opts:["先插上顯示卡","先卡入 I/O Shield","先接好前面板線","先裝散熱膏"],ans:1,exp:"I/O Shield 必須在主機板之前從內側卡入，否則得整片拆掉重來。"},
+    {qt:"CPU 角落的金色三角標記，作用是？",opts:["裝飾用途","標示散熱膏塗點","對齊插槽方向","顯示型號等級"],ans:2,exp:"三角對三角，確保唯一正確方向，避免壓歪針腳。"},
+    {qt:"散熱膏建議用量大約是？",opts:["整顆 CPU 鋪滿","一顆米粒大小","越多越涼","完全不需要"],ans:1,exp:"中央一顆米粒，靠散熱器壓力攤平即可；太多會溢出、太少會過熱。"},
+    {qt:"銅柱（Standoff）的主要功能是？",opts:["美觀","墊高並避免主機板短路","加速散熱","增加重量"],ans:1,exp:"墊高主機板與機殼隔離、防短路，並提供螺絲鎖點。"},
+    {qt:"想啟用雙通道記憶體，兩條 RAM 應該？",opts:["插滿四槽","隨便插兩槽","插在指定成對插槽(如A2/B2)","只插一條"],ans:2,exp:"插在主機板指定的成對（同色）插槽才會啟用雙通道。"},
+    {qt:"專門供電給 CPU 的接頭通常是？",opts:["ATX 24-pin","CPU 8-pin (EPS)","SATA","前面板針腳"],ans:1,exp:"CPU 8-pin（EPS）在主機板左上角；24-pin 是主機板主電源。"}
+  ];
+
+  var SVG_VB={w:820,h:620};
+  var SCENE = '<svg id="pcb-scene" viewBox="0 0 820 620" role="img" aria-label="機殼內部組裝示意圖">'
+   +'<rect x="20" y="20" width="780" height="580" rx="20" fill="#0e161e" stroke="#26333f" stroke-width="2"/>'
+   +'<rect x="40" y="40" width="740" height="540" rx="12" fill="#15202b" stroke="#21303c"/>'
+   +'<text x="58" y="68" class="pcb-lbl">CASE · ATX MID-TOWER</text>'
+   +'<rect x="56" y="110" width="20" height="150" rx="3" fill="#0b1219" stroke="#2a3742"/>'
+   +'<g id="pcb-g-ioshield" class="pcb-comp"><rect x="55" y="110" width="22" height="150" rx="3" fill="#9aa6b0" stroke="#d4dde4"/>'
+     +'<rect x="59" y="120" width="14" height="22" rx="2" fill="#5d6a76"/><rect x="59" y="150" width="14" height="14" rx="2" fill="#5d6a76"/>'
+     +'<rect x="59" y="172" width="14" height="40" rx="2" fill="#5d6a76"/><rect x="59" y="220" width="14" height="30" rx="2" fill="#5d6a76"/>'
+     +'<text x="46" y="278" class="pcb-lbl" transform="rotate(-90 46 278)">I/O SHIELD</text></g>'
+   +'<g id="pcb-g-standoffs" class="pcb-comp"><g fill="#c8803c" stroke="#8a571f">'
+     +'<circle cx="110" cy="120" r="6"/><circle cx="420" cy="120" r="6"/><circle cx="110" cy="300" r="6"/><circle cx="420" cy="300" r="6"/>'
+     +'<circle cx="110" cy="465" r="6"/><circle cx="420" cy="465" r="6"/><circle cx="265" cy="300" r="6"/></g>'
+     +'<text x="90" y="500" class="pcb-lbl" fill="#d9a06b">STANDOFFS ×7</text></g>'
+   +'<g id="pcb-g-mobo" class="pcb-comp"><rect x="95" y="100" width="345" height="380" rx="8" fill="#1f7a52" stroke="#34a673" stroke-width="2"/>'
+     +'<g stroke="#2a8f63" stroke-width="1" opacity=".5"><line x1="110" y1="115" x2="425" y2="115"/><line x1="110" y1="470" x2="425" y2="470"/>'
+     +'<line x1="120" y1="110" x2="120" y2="475"/><line x1="415" y1="110" x2="415" y2="475"/></g>'
+     +'<g fill="#dfe6ec"><circle cx="110" cy="120" r="4"/><circle cx="420" cy="120" r="4"/><circle cx="110" cy="300" r="4"/>'
+     +'<circle cx="420" cy="300" r="4"/><circle cx="110" cy="465" r="4"/><circle cx="420" cy="465" r="4"/></g>'
+     +'<rect x="198" y="150" width="78" height="78" rx="5" fill="#10301f" stroke="#0a2417"/>'
+     +'<g fill="#0f2c1d" stroke="#0a2417"><rect x="300" y="140" width="11" height="190" rx="2"/><rect x="318" y="140" width="11" height="190" rx="2"/>'
+     +'<rect x="336" y="140" width="11" height="190" rx="2"/><rect x="354" y="140" width="11" height="190" rx="2"/></g>'
+     +'<text x="298" y="352" class="pcb-lbl">A1 B1 A2 B2</text><rect x="150" y="350" width="170" height="12" rx="3" fill="#0f2c1d" stroke="#0a2417"/>'
+     +'<text x="150" y="345" class="pcb-lbl">M.2 SLOT</text><g fill="#1c1230" stroke="#0d0a18"><rect x="110" y="400" width="250" height="13" rx="2"/>'
+     +'<rect x="110" y="430" width="180" height="13" rx="2"/></g><text x="112" y="396" class="pcb-lbl" fill="#b9a6e6">PCIe x16</text>'
+     +'<text x="430" y="110" class="pcb-lbl">MOTHERBOARD</text></g>'
+   +'<g id="pcb-g-cpu" class="pcb-comp"><rect x="205" y="157" width="64" height="64" rx="4" fill="#c9ced4" stroke="#9aa1a9"/>'
+     +'<g stroke="#aeb4bb" stroke-width="1" opacity=".7"><line x1="213" y1="165" x2="261" y2="165"/><line x1="213" y1="175" x2="261" y2="175"/>'
+     +'<line x1="213" y1="185" x2="261" y2="185"/><line x1="213" y1="195" x2="261" y2="195"/><line x1="213" y1="205" x2="261" y2="205"/></g>'
+     +'<path d="M209 161 L217 161 L209 169 Z" fill="var(--signal)"/><text x="200" y="244" class="pcb-lbl">CPU · 三角對齊左下</text></g>'
+   +'<g id="pcb-g-paste" class="pcb-comp"><circle cx="237" cy="189" r="7" fill="#dfe3e8" stroke="#b7bdc4"/><text x="248" y="193" class="pcb-lbl">PASTE · 米粒大小</text></g>'
+   +'<g id="pcb-g-cooler" class="pcb-comp"><rect x="186" y="138" width="102" height="102" rx="8" fill="#3a4654" stroke="#566476"/>'
+     +'<circle cx="237" cy="189" r="40" fill="#222c37" stroke="#48566a"/><g stroke="#5d6e84" stroke-width="3" fill="none">'
+     +'<path d="M237 189 q22 -8 26 14"/><path d="M237 189 q8 22 -16 22"/><path d="M237 189 q-22 8 -26 -14"/><path d="M237 189 q-8 -22 16 -22"/></g>'
+     +'<circle cx="237" cy="189" r="6" fill="#16b8c4"/><text x="186" y="256" class="pcb-lbl">CPU COOLER</text></g>'
+   +'<g id="pcb-g-ram" class="pcb-comp"><rect x="335" y="140" width="13" height="190" rx="2" fill="#16b8c4" stroke="#0e8a93"/>'
+     +'<rect x="353" y="140" width="13" height="190" rx="2" fill="#16b8c4" stroke="#0e8a93"/>'
+     +'<g fill="#0c5a60"><rect x="337" y="148" width="9" height="6"/><rect x="355" y="148" width="9" height="6"/></g>'
+     +'<text x="372" y="240" class="pcb-lbl" fill="#7fdfe6">RAM ×2 (雙通道)</text></g>'
+   +'<g id="pcb-g-ssd" class="pcb-comp"><rect x="150" y="349" width="150" height="14" rx="3" fill="#2b3340" stroke="#465468"/>'
+     +'<rect x="285" y="350" width="13" height="12" rx="2" fill="#16b8c4"/><text x="150" y="380" class="pcb-lbl">M.2 NVMe SSD</text></g>'
+   +'<g id="pcb-g-gpu" class="pcb-comp"><rect x="108" y="398" width="430" height="58" rx="6" fill="#202732" stroke="#3a4554"/>'
+     +'<rect x="108" y="396" width="20" height="62" rx="2" fill="#16b8c4"/><circle cx="320" cy="427" r="22" fill="#161c25" stroke="#3a4554"/>'
+     +'<circle cx="430" cy="427" r="22" fill="#161c25" stroke="#3a4554"/><g stroke="#3a4554" stroke-width="2" fill="none">'
+     +'<path d="M320 427 l16 -6 M320 427 l-6 16 M320 427 l-16 6 M320 427 l6 -16"/><path d="M430 427 l16 -6 M430 427 l-6 16 M430 427 l-16 6 M430 427 l6 -16"/></g>'
+     +'<text x="450" y="445" class="pcb-lbl">GPU</text></g>'
+   +'<g id="pcb-g-psu" class="pcb-comp"><rect x="60" y="500" width="230" height="78" rx="8" fill="#171f29" stroke="#33414f"/>'
+     +'<circle cx="105" cy="539" r="26" fill="#0e151d" stroke="#33414f"/><g stroke="#3a4a5a" stroke-width="2" fill="none">'
+     +'<path d="M105 539 l14 -5 M105 539 l-5 14 M105 539 l-14 5 M105 539 l5 -14"/></g>'
+     +'<rect x="150" y="520" width="120" height="40" rx="4" fill="#0e151d" stroke="#2a3744"/><text x="150" y="514" class="pcb-lbl">PSU 電源供應器</text></g>'
+   +'<g id="pcb-g-cables" class="pcb-comp" fill="none" stroke-width="5" stroke-linecap="round">'
+     +'<path d="M270 530 C 470 520 470 300 442 300" stroke="#e0c24a"/><path d="M180 505 C 150 360 150 160 140 105" stroke="#e0533d"/>'
+     +'<path d="M250 545 C 520 560 640 200 700 175" stroke="#16b8c4"/><path d="M270 555 C 460 590 470 480 442 465" stroke="#9b8cf0"/>'
+     +'<text x="455" y="296" class="pcb-lbl" fill="#e9d77e">ATX 24-pin</text><text x="118" y="100" class="pcb-lbl" fill="#f08a78">CPU 8-pin</text></g>'
+   +'<g id="pcb-g-post" class="pcb-comp"><circle cx="740" cy="540" r="16" fill="#0e151d" stroke="#2a3744"/><circle cx="740" cy="540" r="7" fill="#2fbf71"/>'
+     +'<text x="620" y="546" class="pcb-lbl" fill="#5fe39a">● POWER ON</text><rect x="540" y="430" width="210" height="70" rx="8" fill="#06140d" stroke="#1f5a3a"/>'
+     +'<text x="556" y="460" class="pcb-lbl" fill="#5fe39a">&gt; POST CHECK ............ OK</text>'
+     +'<text x="556" y="480" class="pcb-lbl" fill="#5fe39a">&gt; CPU / RAM / GPU ....... DETECTED</text></g>'
+   +'<g id="pcb-sidepanel"><rect x="40" y="40" width="740" height="540" rx="12" fill="#1b2733" stroke="#33424f" stroke-width="2" opacity="0.94"/>'
+     +'<rect x="40" y="40" width="740" height="540" rx="12" fill="url(#pcbBrushed)" opacity="0.5"/>'
+     +'<g fill="#3a4a59"><circle cx="62" cy="62" r="6"/><circle cx="758" cy="62" r="6"/><circle cx="62" cy="558" r="6"/><circle cx="758" cy="558" r="6"/></g>'
+     +'<text x="410" y="305" text-anchor="middle" class="pcb-lbl" fill="#8fa3b5" style="font-size:14px">機殼側板（拖『螺絲起子』到這裡開啟）</text></g>'
+   +'<defs><linearGradient id="pcbBrushed" x1="0" y1="0" x2="1" y2="1">'
+     +'<stop offset="0" stop-color="#2a3744"/><stop offset="0.5" stop-color="#1b2733"/><stop offset="1" stop-color="#2a3744"/></linearGradient></defs></svg>';
+
+  /* ---------- 狀態 ---------- */
+  var cur=0, mistakes=0, startTime=null, timerId=null, finished=false, sel=null;
+  var LSKEY="cc_pcbuild_v1";
+  function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+
+  /* ---------- 建立 view 區段 ---------- */
+  var section=el("section","view"); section.id="view-pcbuild";
+  var back=el("button","btn back"); back.textContent="← 返回實習中心";
+  back.addEventListener("click",function(){callShow("lab-hub");});
+  var subbar=el("div","subbar"); subbar.appendChild(back);
+  subbar.appendChild(el("span","crumb","🧩 硬體實習 · PC 積木組裝"));
+  section.appendChild(subbar);
+  var root=el("div"); root.id="pcb-root"; section.appendChild(root);
+  ov.parentNode.appendChild(section);
+
+  /* ---------- 版面骨架 ---------- */
+  var head=el("div");
+  head.appendChild(el("div","pcb-eyebrow","計算機概論實習　·　郭博仁"));
+  head.appendChild(el("div","pcb-h1","PC 積木組裝實習"));
+  head.appendChild(el("div","pcb-sub","把右側零件積木「拖」進機殼閃爍的插槽——先想好下一步該裝什麼，再動手。順序錯會被擋下並提示。"));
+  var g=el("div","pcb-gauges");
+  g.innerHTML='<div class="pcb-gauge"><div class="lab">Progress</div><div class="val" id="pcb-prog">0 / 13</div></div>'
+   +'<div class="pcb-gauge good" id="pcb-scorebox"><div class="lab">Score</div><div class="val" id="pcb-score">100</div></div>'
+   +'<div class="pcb-gauge warn"><div class="lab">Mistakes</div><div class="val" id="pcb-err">0</div></div>'
+   +'<div class="pcb-gauge"><div class="lab">Time</div><div class="val" id="pcb-time">00:00</div></div>';
+  head.appendChild(g);
+  var pl=el("div","pcb-progline"); pl.appendChild(el("div","pcb-progfill")); pl.firstChild.id="pcb-progfill"; head.appendChild(pl);
+  root.appendChild(head);
+
+  var grid=el("div","pcb-grid");
+  // 左：舞台
+  var stage=el("div","pcb-stage");
+  stage.innerHTML='<div class="pcb-stage-top"><span id="pcb-stagestep">STEP 01 / 13 · 開啟機殼側板</span><span>ATX · 側板視角</span></div>';
+  var inner=el("div","pcb-stage-inner"); inner.innerHTML=SCENE;
+  var zones=el("div","pcb-zones"); zones.id="pcb-zones"; inner.appendChild(zones);
+  var snap=el("div","pcb-snap"); snap.id="pcb-snap"; inner.appendChild(snap);
+  stage.appendChild(inner); grid.appendChild(stage);
+
+  // 右欄
+  var col=el("div","pcb-col");
+  var p1=el("div","pcb-panel");
+  p1.innerHTML='<div class="pcb-phead"><span class="idx" id="pcb-stepidx">01</span><h3>目前步驟</h3></div>'
+   +'<div class="pcb-pbody"><p class="pcb-stepname" id="pcb-stepname"></p><p class="pcb-why" id="pcb-why"></p><div class="pcb-hint" id="pcb-hint"></div></div>';
+  col.appendChild(p1);
+
+  var p2=el("div","pcb-panel");
+  p2.innerHTML='<div class="pcb-phead"><span class="idx">🧱</span><h3>零件積木托盤</h3></div><div class="pcb-pbody">'
+   +'<p class="pcb-traynote"><b>拖曳</b>正確積木到機殼內<b>閃爍</b>的插槽放開即可安裝；也可先點積木再點插槽。順序錯會被擋下。</p>'
+   +'<div class="pcb-tray" id="pcb-tray"></div>'
+   +'<div class="pcb-ctrls"><button class="pcb-btn ghost" id="pcb-hintbtn" type="button">需要提示</button>'
+   +'<button class="pcb-btn ghost" id="pcb-reset" type="button">重新開始</button></div></div>';
+  col.appendChild(p2);
+
+  var p3=el("div","pcb-panel");
+  p3.innerHTML='<div class="pcb-phead"><span class="idx">AI</span><h3>裝機助教</h3></div><div class="pcb-pbody">'
+   +'<div class="pcb-chips" id="pcb-chips"></div>'
+   +'<div class="pcb-answer" id="pcb-answer"><span style="color:#8893a0">點上方常見問題，或直接輸入你的疑問。</span></div>'
+   +'<div class="pcb-askrow"><input id="pcb-ask" type="text" placeholder="例如：散熱膏塗太多會怎樣？"><button class="pcb-btn cyan" id="pcb-askbtn" type="button">問</button></div></div>';
+  col.appendChild(p3);
+  grid.appendChild(col);
+  root.appendChild(grid);
+
+  root.appendChild(el("div","pcb-foot","住在海邊的資管人 · 整合自《PC 裝機虛擬實驗室》 · 拖放積木式互動 · 可離線 · CC BY-NC-SA 4.0"));
+
+  /* ---------- 落點覆蓋層 ---------- */
+  var zoneEls=[];
+  STEPS.forEach(function(s,i){
+    var z=el("div","pcb-zone"); var zo=s.zone;
+    z.style.left=(zo.x/SVG_VB.w*100)+"%"; z.style.top=(zo.y/SVG_VB.h*100)+"%";
+    z.style.width=(zo.w/SVG_VB.w*100)+"%"; z.style.height=(zo.h/SVG_VB.h*100)+"%";
+    z.innerHTML='<span class="pcb-ztag">放這裡</span>';
+    z.dataset.idx=i;
+    z.addEventListener("click",function(){ if(sel!==null) tryPlace(sel); });
+    zones.appendChild(z); zoneEls.push(z);
+  });
+
+  /* ---------- 托盤積木 ---------- */
+  var brickEls=[];
+  function buildTray(){
+    var t=document.getElementById("pcb-tray"); t.innerHTML="";
+    STEPS.forEach(function(s,i){
+      var p=PARTS[s.item];
+      var b=el("button","pcb-brick"); b.type="button"; b.dataset.idx=i;
+      b.innerHTML='<span class="pcb-ic" style="background:'+p.c+'">'+p.ic+'</span>'
+        +'<span class="pcb-bn">'+p.nm+'<span class="en">'+p.en+'</span></span>'
+        +'<span class="pcb-doneflag" style="display:none">✓</span>';
+      b.addEventListener("pointerdown",function(ev){ startDrag(ev,i,b); });
+      b.addEventListener("click",function(ev){ if(b._dragged){b._dragged=false;return;} pickBrick(i,b); });
+      t.appendChild(b); brickEls.push(b);
+    });
+  }
+
+  /* ---------- FAQ 助教 ---------- */
+  function buildChips(){
+    var c=document.getElementById("pcb-chips"); c.innerHTML="";
+    FAQ.forEach(function(f){ var b=el("button","pcb-chip",f.q.replace(/？$/,""));
+      b.type="button"; b.addEventListener("click",function(){ showAnswer(f.q,f.a); }); c.appendChild(b); });
+  }
+  function showAnswer(q,a){ document.getElementById("pcb-answer").innerHTML='<div class="qa">'+q+'</div>'+a; }
+  function ask(){
+    var v=document.getElementById("pcb-ask").value.trim(); if(!v) return;
+    var t=v.toLowerCase(), best=null, sc=-1;
+    FAQ.forEach(function(f){ var key=(f.q+f.a).toLowerCase(), s=0;
+      ["三角","cpu","散熱膏","銅柱","standoff","shield","擋板","ram","記憶體","雙通道","前面板","panel","24","8-pin","8pin","atx","開機","post","畫面","ssd","m.2","顯示卡","gpu"]
+      .forEach(function(k){ if(t.indexOf(k)>=0 && key.indexOf(k.toLowerCase())>=0) s++; });
+      if(s>sc){sc=s;best=f;} });
+    if(sc>0&&best) showAnswer(v,best.a);
+    else showAnswer(v,"內建解答庫沒有完全對應的題目。試著點上方常見問題，或換個關鍵字（如：散熱膏、銅柱、雙通道、POST）。");
+  }
+
+  /* ---------- 渲染步驟 ---------- */
+  function renderStep(){
+    var s=STEPS[cur];
+    document.getElementById("pcb-stepidx").textContent=String(cur+1).padStart(2,"0");
+    document.getElementById("pcb-stepname").textContent=s.name;
+    document.getElementById("pcb-why").innerHTML='<span class="pcb-think">先思考</span>'+s.why;
+    document.getElementById("pcb-stagestep").textContent="STEP "+String(cur+1).padStart(2,"0")+" / 13 · "+s.name;
+    document.getElementById("pcb-prog").textContent=cur+" / 13";
+    document.getElementById("pcb-progfill").style.width=(cur/STEPS.length*100)+"%";
+    clearHint(); sel=null;
+    zoneEls.forEach(function(z,i){ z.classList.toggle("armed",i===cur && !finished); z.classList.remove("hover"); });
+    brickEls.forEach(function(b,i){ b.classList.remove("sel"); b.classList.toggle("next",i===cur && !finished);
+      b.classList.toggle("done",i<cur);
+      b.querySelector(".pcb-doneflag").style.display=(i<cur)?"block":"none"; });
+  }
+  function pickBrick(i,b){
+    if(finished) return;
+    if(i<cur){ flash("該零件已安裝完成。","bad"); return; }
+    if(i!==cur){ penalize(); flash("還不是裝「"+PARTS[STEPS[i].item].nm+"」的時候。<br>提示：第 "+(cur+1)+" 步應先安裝 <b>"+PARTS[STEPS[cur].item].nm+"</b>。","bad"); return; }
+    sel=i; brickEls.forEach(function(x){x.classList.remove("sel");}); b.classList.add("sel");
+    flash("已拿起「"+PARTS[STEPS[cur].item].nm+"」，請點機殼內<b>閃爍</b>的插槽放下。","ok");
+  }
+  function tryPlace(i){
+    if(finished) return;
+    if(i<cur){ flash("該零件已安裝完成。","bad"); return; }
+    if(i!==cur){ penalize(); flash("還不是裝「"+PARTS[STEPS[i].item].nm+"」的時候。","bad"); return; }
+    install(cur);
+  }
+
+  /* ---------- 拖曳 ---------- */
+  var drag=null;
+  function startDrag(ev,i,b){
+    if(finished) return;
+    if(i<cur){ return; }                         // 已完成積木不拖
+    ev.preventDefault();
+    var rect=b.getBoundingClientRect();
+    var ghost=b.cloneNode(true); ghost.classList.add("pcb-ghost");
+    ghost.style.width=rect.width+"px"; ghost.classList.remove("next","sel");
+    document.body.appendChild(ghost);
+    b.classList.add("dragging");
+    drag={idx:i, brick:b, ghost:ghost, moved:false};
+    moveGhost(ev.clientX,ev.clientY);
+    document.addEventListener("pointermove",onMove);
+    document.addEventListener("pointerup",onUp);
+    document.addEventListener("pointercancel",onUp);
+  }
+  function moveGhost(x,y){ if(drag&&drag.ghost){ drag.ghost.style.left=x+"px"; drag.ghost.style.top=y+"px"; } }
+  function onMove(ev){
+    if(!drag) return;
+    drag.moved=true; drag.brick._dragged=true;
+    moveGhost(ev.clientX,ev.clientY);
+    // 高亮：是否懸停在當前 armed 插槽
+    var armed=zoneEls[cur];
+    armed.classList.remove("hover");
+    if(drag.idx===cur && overZone(armed,ev.clientX,ev.clientY)) armed.classList.add("hover");
+  }
+  function overZone(z,x,y){ var r=z.getBoundingClientRect(); return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom; }
+  function onUp(ev){
+    if(!drag) return;
+    document.removeEventListener("pointermove",onMove);
+    document.removeEventListener("pointerup",onUp);
+    document.removeEventListener("pointercancel",onUp);
+    var d=drag; drag=null;
+    d.brick.classList.remove("dragging");
+    if(d.ghost&&d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+    zoneEls.forEach(function(z){z.classList.remove("hover");});
+    if(!d.moved){ return; }                       // 視為單純點擊，交給 click 處理
+    var armed=zoneEls[cur];
+    if(d.idx!==cur){ penalize(); flash("還不是裝「"+PARTS[STEPS[d.idx].item].nm+"」的時候。<br>第 "+(cur+1)+" 步應先裝 <b>"+PARTS[STEPS[cur].item].nm+"</b>。","bad"); return; }
+    if(overZone(armed,ev.clientX,ev.clientY)){ install(cur); }
+    else { flash("把「"+PARTS[STEPS[cur].item].nm+"」拖到機殼內<b>閃爍</b>的插槽上再放開。","bad"); shake(); }
+  }
+
+  /* ---------- 安裝 ---------- */
+  function install(i){
+    var s=STEPS[i];
+    if(!startTime) startClock();
+    if(s.special==="open"||s.special==="close") document.getElementById("pcb-sidepanel").classList.add("opened");
+    s.reveal.forEach(function(id){ var grp=document.getElementById(id); if(grp) grp.classList.add("pcb-on"); });
+    popSnap(zoneEls[i]);
+    cur++;
+    document.getElementById("pcb-prog").textContent=cur+" / 13";
+    if(cur>=STEPS.length){ finish(); persist(); return; }
+    renderStep();
+    flash("✓ 完成："+s.name,"ok");
+    persist();
+  }
+  function popSnap(zone){
+    var sn=document.getElementById("pcb-snap");
+    sn.style.left=(zone.offsetLeft+zone.offsetWidth/2)+"px";
+    sn.style.top=(zone.offsetTop+zone.offsetHeight/2)+"px";
+    sn.classList.remove("go"); void sn.offsetWidth; sn.classList.add("go");
+  }
+
+  /* ---------- 提示 / 計分 / 計時 ---------- */
+  function flash(msg,kind){ var h=document.getElementById("pcb-hint"); h.className="pcb-hint show "+(kind==="bad"?"bad":"ok"); h.innerHTML=msg; }
+  function clearHint(){ var h=document.getElementById("pcb-hint"); h.className="pcb-hint"; h.innerHTML=""; }
+  function shake(){ var sc=document.getElementById("pcb-scene"); if(!sc)return; sc.classList.remove("pcb-shake"); void sc.offsetWidth; sc.classList.add("pcb-shake"); }
+  function penalize(){ mistakes++; updateGauges(); shake(); }
+  function score(){ return Math.max(0,100-mistakes*5); }
+  function updateGauges(){
+    document.getElementById("pcb-err").textContent=mistakes;
+    var sc=score(); document.getElementById("pcb-score").textContent=sc;
+    var box=document.getElementById("pcb-scorebox"); box.classList.toggle("good",sc>=80); box.classList.toggle("warn",sc<80);
+  }
+  function startClock(){ startTime=Date.now(); timerId=setInterval(function(){
+    var t=Math.floor((Date.now()-startTime)/1000);
+    document.getElementById("pcb-time").textContent=String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
+  },1000); }
+  function elapsed(){ if(!startTime) return "00:00"; var t=Math.floor((Date.now()-startTime)/1000);
+    return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"); }
+  function manualHint(){ if(finished) return; var s=STEPS[cur];
+    flash("提示：第 "+(cur+1)+" 步要安裝 <b>"+PARTS[s.item].nm+"</b>。<br>"+s.why,"ok"); }
+
+  /* ---------- 持久化 ---------- */
+  function persist(){ try{ localStorage.setItem(LSKEY,JSON.stringify({cur:cur,mistakes:mistakes,ts:Date.now()})); }catch(e){} }
+  function restore(){ try{ var s=JSON.parse(localStorage.getItem(LSKEY)||"null"); if(!s) return;
+    var k=Math.max(0,Math.min(s.cur|0,STEPS.length)); mistakes=s.mistakes|0;
+    for(var i=0;i<k;i++){ STEPS[i].reveal.forEach(function(id){var grp=document.getElementById(id);if(grp)grp.classList.add("pcb-on");});
+      if(STEPS[i].special) document.getElementById("pcb-sidepanel").classList.add("opened"); }
+    cur=k; updateGauges();
+    if(cur>=STEPS.length){ finished=true; document.getElementById("pcb-prog").textContent="13 / 13"; document.getElementById("pcb-progfill").style.width="100%"; }
+  }catch(e){} }
+
+  /* ---------- 完成 → 測驗 → 報告 ---------- */
+  var mask, quizAns=[];
+  function ensureMask(){ if(mask) return; mask=el("div"); mask.id="pcb-mask";
+    mask.innerHTML='<div class="pcb-modal" id="pcb-modal"></div>'; document.body.appendChild(mask);
+    mask.addEventListener("click",function(e){ if(e.target===mask) mask.classList.remove("show"); }); }
+  function finish(){ finished=true; clearInterval(timerId);
+    document.getElementById("pcb-prog").textContent="13 / 13"; document.getElementById("pcb-progfill").style.width="100%";
+    zoneEls.forEach(function(z){z.classList.remove("armed");}); renderStepDone(); openQuiz(); }
+  function renderStepDone(){ document.getElementById("pcb-stepname").textContent="🎉 全部安裝完成！";
+    document.getElementById("pcb-why").innerHTML="你已親手把 13 個零件組成一台能開機的電腦。接著做觀念驗證，鞏固「為什麼這樣裝」。"; }
+  function openQuiz(){
+    ensureMask(); quizAns=new Array(QUIZ.length).fill(null);
+    var m=document.getElementById("pcb-modal");
+    var html='<div class="mhead"><span class="idx">測驗</span><h3>觀念驗證 '+QUIZ.length+' 題</h3></div><div class="mbody">';
+    QUIZ.forEach(function(q,qi){ html+='<div class="q"><p class="qt">'+(qi+1)+'. '+q.qt+'</p>';
+      q.opts.forEach(function(o,oi){ html+='<button class="opt" data-q="'+qi+'" data-o="'+oi+'" type="button">'+String.fromCharCode(65+oi)+'. '+o+'</button>'; });
+      html+='<p class="exp" id="pcb-exp'+qi+'">'+q.exp+'</p></div>'; });
+    html+='<button class="pcb-btn dark" id="pcb-toreport" type="button" style="width:100%;margin-top:6px">查看實驗報告 →</button></div>';
+    m.innerHTML=html;
+    m.querySelectorAll(".opt").forEach(function(b){ b.addEventListener("click",onPick); });
+    document.getElementById("pcb-toreport").addEventListener("click",showReport);
+    mask.classList.add("show");
+  }
+  function onPick(e){ var b=e.currentTarget, qi=+b.dataset.q, oi=+b.dataset.o;
+    if(quizAns[qi]!==null) return; quizAns[qi]=oi; var correct=QUIZ[qi].ans;
+    document.querySelectorAll('#pcb-modal .opt[data-q="'+qi+'"]').forEach(function(gg){ gg.disabled=true; var gi=+gg.dataset.o;
+      if(gi===correct) gg.classList.add("right"); else if(gi===oi) gg.classList.add("wrong"); });
+    document.getElementById("pcb-exp"+qi).classList.add("show"); }
+  function quizScore(){ var c=0; QUIZ.forEach(function(q,i){ if(quizAns[i]===q.ans) c++; }); return c; }
+  function showReport(){
+    var nm=(document.getElementById("pcb-name")&&document.getElementById("pcb-name").value.trim())||"（未填）";
+    var bs=score(), qc=quizScore(), qp=Math.round(qc/QUIZ.length*100), total=Math.round(bs*0.6+qp*0.4);
+    var grade=total>=90?"A":total>=80?"B":total>=70?"C":total>=60?"D":"E";
+    var report="姓名："+nm+"\n─────────────────────\n裝機流程   ："+bs+" / 100（失誤 "+mistakes+" 次）\n觀念測驗   ："+qc+" / "+QUIZ.length+"（"+qp+" 分）\n完成時間   ："+elapsed()+"\n─────────────────────\n總成績 = 裝機×60% + 測驗×40%\n       = "+total+" 分";
+    var m=document.getElementById("pcb-modal");
+    m.innerHTML='<div class="mhead"><span class="idx">報告</span><h3>實驗報告 · Build Report</h3></div><div class="mbody">'
+     +'<div class="name-row"><label>學生姓名 / 學號</label><input id="pcb-name" type="text" placeholder="輸入後可複製成績" value="'+(nm==="（未填）"?"":nm)+'"></div>'
+     +'<div style="text-align:center;margin:6px 0 14px"><div class="gradebig" style="color:'+(total>=80?"#2fbf71":total>=60?"#f0a500":"#e0533d")+'">'+grade+'</div>'
+     +'<div style="font:13px ui-monospace,monospace;color:#5b6b7a">TOTAL '+total+' / 100</div></div>'
+     +'<div class="report" id="pcb-reporttext">'+report+'</div>'
+     +'<div class="pcb-ctrls" style="margin-top:14px"><button class="pcb-btn dark" id="pcb-copy" type="button">複製成績</button>'
+     +'<button class="pcb-btn ghost" id="pcb-close" type="button">關閉</button>'
+     +'<button class="pcb-btn ghost" id="pcb-again" type="button">再裝一次</button></div></div>';
+    document.getElementById("pcb-copy").addEventListener("click",function(){
+      var n=document.getElementById("pcb-name").value.trim()||"（未填）";
+      var txt=document.getElementById("pcb-reporttext").textContent.replace(/姓名：.*/,"姓名："+n);
+      if(navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ var b=document.getElementById("pcb-copy"); b.textContent="已複製 ✓"; setTimeout(function(){b.textContent="複製成績";},1500); });
+    });
+    document.getElementById("pcb-close").addEventListener("click",function(){ mask.classList.remove("show"); });
+    document.getElementById("pcb-again").addEventListener("click",function(){ mask.classList.remove("show"); resetAll(); });
+  }
+
+  /* ---------- 重置 ---------- */
+  function resetAll(){
+    cur=0; sel=null; mistakes=0; finished=false; startTime=null; clearInterval(timerId); timerId=null;
+    document.getElementById("pcb-time").textContent="00:00"; updateGauges();
+    document.getElementById("pcb-sidepanel").classList.remove("opened");
+    STEPS.forEach(function(s){ s.reveal.forEach(function(id){ var grp=document.getElementById(id); if(grp) grp.classList.remove("pcb-on"); }); });
+    document.getElementById("pcb-progfill").style.width="0%";
+    renderStep(); clearHint();
+    document.getElementById("pcb-answer").innerHTML='<span style="color:#8893a0">點上方常見問題，或直接輸入你的疑問。</span>';
+    try{ localStorage.removeItem(LSKEY); }catch(e){}
+  }
+
+  /* ---------- 綁定 + 啟動 ---------- */
+  buildTray(); buildChips();
+  document.getElementById("pcb-hintbtn").addEventListener("click",manualHint);
+  document.getElementById("pcb-reset").addEventListener("click",resetAll);
+  document.getElementById("pcb-askbtn").addEventListener("click",ask);
+  document.getElementById("pcb-ask").addEventListener("keydown",function(e){ if(e.key==="Enter") ask(); });
+  restore();
+  renderStep(); updateGauges();
+  if(finished){ /* 進度顯示已完成；保留現況，由再裝一次重玩 */ }
+})();
+</script>
+
+<!-- ===== 注入：橫向資料流 · 訊息封包雙向傳送（只增不改 / 冪等防護 / .pkf- 前綴 / 接 lab-hub）===== -->
+<style id="pkf-style">
+#pkf-root{--pkf-indigo:#2A2A8A;--pkf-indigo2:#3A3AC0;--pkf-ink:#15151F;--pkf-req:#3A3AC0;--pkf-res:#127A45;
+  --pkf-wash:#EEF0FB;--pkf-line:#C2C6E8;--pkf-muted:#4A4A63;--pkf-amber:#9A5B00;
+  --pkf-cjk:"Microsoft JhengHei","Noto Sans TC","PingFang TC","Heiti TC",sans-serif;
+  --pkf-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-family:var(--pkf-cjk);color:var(--pkf-ink);max-width:980px;margin:0 auto;padding:6px 0 70px;line-height:1.7}
+#pkf-root *{box-sizing:border-box}
+#pkf-root .pkf-eyebrow{font-size:13px;letter-spacing:.2em;color:#C81E1E;font-weight:800}
+#pkf-root .pkf-h1{font-size:30px;font-weight:900;color:var(--pkf-indigo);margin:6px 0 4px;line-height:1.25}
+#pkf-root .pkf-sub{color:var(--pkf-muted);font-size:15px;font-weight:600;margin-bottom:14px}
+#pkf-root .pkf-think{display:inline-flex;align-items:center;gap:7px;background:var(--pkf-wash);border:1.5px solid var(--pkf-indigo);
+  color:var(--pkf-indigo);font-weight:800;font-size:13.5px;padding:7px 14px;border-radius:99px;margin:2px 0 18px}
+#pkf-root .pkf-think b{color:#C81E1E}
+/* 圖例 */
+#pkf-root .pkf-legend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-size:13px;font-weight:700;color:var(--pkf-muted);margin:0 0 12px}
+#pkf-root .pkf-leg{display:inline-flex;align-items:center;gap:7px}
+#pkf-root .pkf-chip{display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 10px;border-radius:99px;color:#fff;font-weight:800;font-size:12px}
+#pkf-root .pkf-chip.req{background:var(--pkf-req)} #pkf-root .pkf-chip.res{background:var(--pkf-res)}
+/* 軌道 + 封包 */
+#pkf-root .pkf-track{position:relative;height:54px;margin:8px 0 4px}
+#pkf-root .pkf-rail{position:absolute;left:0;right:0;top:26px;height:3px;background:repeating-linear-gradient(90deg,var(--pkf-line) 0 10px,transparent 10px 18px);border-radius:99px}
+#pkf-root .pkf-packet{position:absolute;top:6px;left:0;transform:translateX(-50%);min-width:78px;height:42px;padding:0 12px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;gap:6px;font-weight:900;font-size:14px;color:#fff;
+  background:var(--pkf-req);box-shadow:0 6px 16px rgba(40,40,140,.34);opacity:0;transition:left .62s cubic-bezier(.5,.05,.3,1),opacity .2s,background .2s;white-space:nowrap;z-index:3}
+#pkf-root .pkf-packet.show{opacity:1}
+#pkf-root .pkf-packet.res{background:var(--pkf-res);box-shadow:0 6px 16px rgba(18,122,69,.34)}
+/* 層列 */
+#pkf-root .pkf-layers{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+#pkf-root .pkf-layer{position:relative;border:2px solid var(--pkf-line);border-radius:14px;background:#fff;padding:14px 12px 13px;
+  box-shadow:0 2px 10px rgba(20,30,80,.06);transition:border-color .2s,box-shadow .2s,transform .2s,background .2s;min-height:158px;display:flex;flex-direction:column}
+#pkf-root .pkf-layer .pkf-ico{font-size:30px;line-height:1;margin-bottom:8px}
+#pkf-root .pkf-layer .pkf-ltag{font-size:12px;font-weight:800;letter-spacing:.06em;color:#fff;background:var(--pkf-indigo);align-self:flex-start;
+  padding:3px 9px;border-radius:99px;margin-bottom:7px}
+#pkf-root .pkf-layer .pkf-lname{font-size:15px;font-weight:900;color:var(--pkf-ink);margin-bottom:4px}
+#pkf-root .pkf-layer .pkf-ldesc{font-size:12.5px;font-weight:600;color:var(--pkf-muted);line-height:1.55}
+#pkf-root .pkf-layer .pkf-state{margin-top:auto;font-size:12px;font-weight:800;font-family:var(--pkf-mono);min-height:18px;padding-top:8px}
+#pkf-root .pkf-layer.req{border-color:var(--pkf-req);box-shadow:0 0 0 3px rgba(58,58,192,.16),0 8px 20px rgba(40,40,140,.18);transform:translateY(-3px);background:#F6F7FE}
+#pkf-root .pkf-layer.req .pkf-state{color:var(--pkf-req)}
+#pkf-root .pkf-layer.res{border-color:var(--pkf-res);box-shadow:0 0 0 3px rgba(18,122,69,.16),0 8px 20px rgba(18,122,69,.18);transform:translateY(-3px);background:#F1FAF4}
+#pkf-root .pkf-layer.res .pkf-state{color:var(--pkf-res)}
+#pkf-root .pkf-layer.done .pkf-ltag{background:var(--pkf-res)}
+#pkf-root .pkf-layer.done{border-color:#9FD9B6}
+#pkf-root .pkf-arrowrow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:9px 0 2px}
+#pkf-root .pkf-arrowrow span{text-align:center;font-size:12px;font-weight:800;color:#A7ABC8;letter-spacing:.04em}
+/* 字幕 + 控制 */
+#pkf-root .pkf-caption{margin:16px 0 4px;border:1px solid var(--pkf-line);border-left:6px solid var(--pkf-indigo);background:var(--pkf-wash);
+  border-radius:0 12px 12px 0;padding:13px 16px;font-size:15px;font-weight:700;color:var(--pkf-ink);min-height:50px;display:flex;align-items:center;gap:10px}
+#pkf-root .pkf-caption .pkf-dir{flex:none;font-weight:900;font-size:13px;padding:3px 10px;border-radius:99px;color:#fff;background:var(--pkf-muted)}
+#pkf-root .pkf-caption.req .pkf-dir{background:var(--pkf-req)} #pkf-root .pkf-caption.res .pkf-dir{background:var(--pkf-res)}
+#pkf-root .pkf-ctrls{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+#pkf-root .pkf-btn{font-family:var(--pkf-cjk);font-weight:800;font-size:15px;padding:12px 22px;border-radius:11px;border:2px solid var(--pkf-indigo);
+  background:var(--pkf-indigo);color:#fff;cursor:pointer;transition:transform .1s,opacity .2s}
+#pkf-root .pkf-btn:hover{transform:translateY(-1px)} #pkf-root .pkf-btn:disabled{opacity:.5;cursor:default;transform:none}
+#pkf-root .pkf-btn.ghost{background:#fff;color:var(--pkf-indigo)}
+#pkf-root .pkf-note{margin-top:18px;font-size:13px;color:var(--pkf-muted);font-weight:600;line-height:1.7;border-top:1px dashed var(--pkf-line);padding-top:14px}
+@media(max-width:760px){
+  #pkf-root .pkf-layers,#pkf-root .pkf-arrowrow{grid-template-columns:1fr;gap:9px}
+  #pkf-root .pkf-arrowrow{display:none}
+  #pkf-root .pkf-layer{min-height:0;flex-direction:row;align-items:center;gap:12px;flex-wrap:wrap}
+  #pkf-root .pkf-layer .pkf-ico{margin:0}
+  #pkf-root .pkf-layer .pkf-ldesc{flex:1 1 100%}
+  #pkf-root .pkf-track{display:none}
+}
+@media(prefers-reduced-motion:reduce){#pkf-root .pkf-packet{transition:opacity .2s}#pkf-root .pkf-layer{transition:none}}
+</style>
+<script>
+(function(){
+  if (document.getElementById("view-packetflow")) return;            // 冪等防護
+  var ov = document.getElementById("view-overview");
+  if (!ov || !ov.parentNode) return;
+  function callShow(v){ if(window.__show) window.__show(v);
+    else { document.querySelectorAll(".view").forEach(function(x){x.classList.toggle("active",x.id==="view-"+v);}); window.scrollTo({top:0}); } }
+  function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+
+  var LAYERS=[
+    {tag:"應用層",name:"應用程式",ico:"🖥️",desc:"使用者按下「存檔」，送出寫入請求。",
+      req:"送出存檔請求",res:"畫面顯示「已儲存 ✓」"},
+    {tag:"系統層",name:"作業系統",ico:"⚙️",desc:"決定寫入位置、配置所需資源。",
+      req:"安排寫入位置",res:"回報寫入完成"},
+    {tag:"驅動層",name:"驅動程式",ico:"🔌",desc:"把指令翻譯成硬體看得懂的訊號。",
+      req:"翻譯硬體訊號",res:"確認指令送達"},
+    {tag:"硬體層",name:"SSD 儲存體",ico:"💾",desc:"實際把資料寫入磁碟區塊。",
+      req:"寫入磁碟區塊",res:"磁碟寫入成功"},
+    {tag:"網路層",name:"雲端同步",ico:"☁️",desc:"把檔案上傳備份到雲端。",
+      req:"上傳雲端備份",res:"雲端備份完成 ✓"}
+  ];
+
+  /* view 區段 */
+  var section=el("section","view"); section.id="view-packetflow";
+  var back=el("button","btn back"); back.textContent="← 返回實習中心";
+  back.addEventListener("click",function(){callShow("lab-hub");});
+  var subbar=el("div","subbar"); subbar.appendChild(back);
+  subbar.appendChild(el("span","crumb","🔁 網路實習 · 訊息傳送"));
+  section.appendChild(subbar);
+  var root=el("div"); root.id="pkf-root"; section.appendChild(root);
+  ov.parentNode.appendChild(section);
+
+  root.appendChild(el("div","pkf-eyebrow","計算機概論實習　·　網路單元"));
+  root.appendChild(el("div","pkf-h1","橫向資料流：訊息封包雙向傳送"));
+  root.appendChild(el("div","pkf-sub","點下方按鈕，看「存檔」封包由應用程式向右逐層傳到硬體與雲端（請求 ▶），再向左逐層回報成功（回應 ◀）——這就是各層之間的雙向協作。"));
+  root.appendChild(el("div","pkf-think",'<span>🧠 <b>先思考</b></span><span>按下存檔後，這個動作要「經過幾層」、又是怎麼確認真的存好了？先猜猜順序，再按按鈕驗證。</span>'));
+
+  var legend=el("div","pkf-legend");
+  legend.innerHTML='<span class="pkf-leg"><span class="pkf-chip req">請求 ▶</span>由左向右逐層下達</span>'
+    +'<span class="pkf-leg"><span class="pkf-chip res">◀ 回應</span>由右向左逐層回報</span>';
+  root.appendChild(legend);
+
+  /* 封包軌道 */
+  var track=el("div","pkf-track");
+  track.appendChild(el("div","pkf-rail"));
+  var packet=el("div","pkf-packet"); packet.id="pkf-packet"; packet.innerHTML='<span>📦</span><span id="pkf-ptext">存檔</span>';
+  track.appendChild(packet);
+  root.appendChild(track);
+
+  /* 五層 */
+  var layers=el("div","pkf-layers"); layers.id="pkf-layers";
+  var layerEls=[];
+  LAYERS.forEach(function(L,i){
+    var c=el("div","pkf-layer");
+    c.innerHTML='<div class="pkf-ico">'+L.ico+'</div><span class="pkf-ltag">'+L.tag+'</span>'
+      +'<div class="pkf-lname">'+L.name+'</div><div class="pkf-ldesc">'+L.desc+'</div>'
+      +'<div class="pkf-state" id="pkf-st'+i+'"></div>';
+    layers.appendChild(c); layerEls.push(c);
+  });
+  root.appendChild(layers);
+
+  var arr=el("div","pkf-arrowrow");
+  arr.innerHTML='<span>應用</span><span>▶</span><span>▶</span><span>▶</span><span>雲端</span>';
+  root.appendChild(arr);
+
+  /* 字幕 */
+  var cap=el("div","pkf-caption"); cap.id="pkf-cap";
+  cap.innerHTML='<span class="pkf-dir">待機</span><span id="pkf-captxt">按下按鈕，模擬一次「存檔」的完整雙向旅程。</span>';
+  root.appendChild(cap);
+
+  /* 控制 */
+  var ctrls=el("div","pkf-ctrls");
+  var run=el("button","pkf-btn"); run.id="pkf-run"; run.innerHTML="▶ 模擬封包傳送（雙向）";
+  var reset=el("button","pkf-btn ghost"); reset.id="pkf-reset"; reset.textContent="重置";
+  ctrls.appendChild(run); ctrls.appendChild(reset);
+  root.appendChild(ctrls);
+
+  root.appendChild(el("div","pkf-note","💡 觀念：每一層只跟「上下相鄰」的層對話——上層提出請求、下層完成後回報。這種<strong>分層</strong>與<strong>雙向</strong>的設計，讓任何一層壞掉都容易定位，也是網路與作業系統共通的核心思想（請求／回應、封包往返）。"));
+
+  /* ---------- 動畫邏輯 ---------- */
+  var REDUCE = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var running=false, timers=[];
+  function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+  function after(ms,fn){ var t=setTimeout(fn,REDUCE?Math.min(ms,120):ms); timers.push(t); }
+  function centerX(i){
+    var lr=layers.getBoundingClientRect(), er=layerEls[i].getBoundingClientRect();
+    return (er.left+er.width/2)-lr.left;
+  }
+  function setCap(dir,cls,txt){
+    cap.className="pkf-caption "+(cls||"");
+    cap.querySelector(".pkf-dir").textContent=dir;
+    document.getElementById("pkf-captxt").innerHTML=txt;
+  }
+  function clearLayers(){ layerEls.forEach(function(c,i){ c.className="pkf-layer"; document.getElementById("pkf-st"+i).textContent=""; }); }
+
+  function resetAll(){
+    clearTimers(); running=false; run.disabled=false;
+    packet.classList.remove("show","res"); packet.style.left="0px";
+    clearLayers();
+    setCap("待機","","按下按鈕，模擬一次「存檔」的完整雙向旅程。");
+  }
+
+  function play(){
+    if(running) return; running=true; run.disabled=true;
+    clearLayers();
+    var step=720, n=LAYERS.length;
+    packet.classList.remove("res"); document.getElementById("pkf-ptext").textContent="存檔";
+    packet.style.left=centerX(0)+"px"; packet.classList.add("show");
+    // 請求 ▶
+    LAYERS.forEach(function(L,i){
+      after(i*step+30,function(){
+        packet.style.left=centerX(i)+"px";
+        layerEls.forEach(function(c){ c.classList.remove("req"); });
+        layerEls[i].classList.add("req");
+        document.getElementById("pkf-st"+i).textContent="▶ "+L.req;
+        setCap("請求 ▶","req","<b>"+L.tag+"</b>："+L.name+" — "+L.req+"。");
+      });
+    });
+    // 轉向
+    after(n*step+120,function(){
+      packet.classList.add("res"); document.getElementById("pkf-ptext").textContent="成功";
+      setCap("已抵達","res","已抵達最底層並完成寫入＋雲端備份，開始<strong>向左逐層回報成功</strong>……");
+      layerEls.forEach(function(c){ c.classList.remove("req"); });
+    });
+    // 回應 ◀
+    for(var k=0;k<n;k++){(function(k){
+      var i=n-1-k;
+      after(n*step+360 + k*step, function(){
+        packet.style.left=centerX(i)+"px";
+        layerEls.forEach(function(c){ c.classList.remove("res"); });
+        layerEls[i].classList.add("res");
+        document.getElementById("pkf-st"+i).textContent="✓ "+LAYERS[i].res;
+        setCap("◀ 回應","res","<b>"+LAYERS[i].tag+"</b>："+LAYERS[i].res+"。");
+      });
+    })(k);}
+    // 收尾
+    after(n*step+360 + n*step + 120, function(){
+      layerEls.forEach(function(c){ c.classList.remove("req","res"); c.classList.add("done"); });
+      packet.classList.remove("show");
+      setCap("完成 ✓","res","雙向協作完成：<strong>請求</strong>由上而下逐層下達、<strong>回應</strong>由下而上逐層回報——這就是分層架構的封包往返。");
+      running=false; run.disabled=false;
+    });
+  }
+
+  run.addEventListener("click",play);
+  reset.addEventListener("click",resetAll);
+})();
+</script>
+
+<!-- ===== 注入：網路障礙排除工具（ping / tracert / nslookup / ipconfig）併入「訊息傳送」單元 / .nett- 前綴 / 冪等 ===== -->
+<style id="nett-style">
+#nett-root{--nt-indigo:#2A2A8A;--nt-ink:#15151F;--nt-muted:#4A4A63;--nt-line:#C7CBE4;--nt-wash:#EEF0FB;
+  --nt-ok:#127A45;--nt-bad:#C81E1E;--nt-amber:#9A5B00;--nt-termbg:#0E1226;--nt-termfg:#D6E3F4;--nt-termgreen:#7CE0A3;--nt-termdim:#7A85A8;
+  --nt-cjk:"Microsoft JhengHei","Noto Sans TC","PingFang TC","Heiti TC",sans-serif;
+  --nt-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Courier New",monospace;
+  font-family:var(--nt-cjk);color:var(--nt-ink);max-width:980px;margin:34px auto 0;padding-top:26px;border-top:2px dashed var(--nt-line);line-height:1.7}
+#nett-root *{box-sizing:border-box}
+#nett-root .nett-eyebrow{font-size:13px;letter-spacing:.18em;color:var(--nt-bad);font-weight:800}
+#nett-root .nett-h2{font-size:24px;font-weight:900;color:var(--nt-indigo);margin:6px 0 4px}
+#nett-root .nett-sub{color:var(--nt-muted);font-size:14.5px;font-weight:600;margin-bottom:12px}
+#nett-root .nett-think{display:inline-flex;align-items:center;gap:7px;background:var(--nt-wash);border:1.5px solid var(--nt-indigo);
+  color:var(--nt-indigo);font-weight:800;font-size:13.5px;padding:7px 14px;border-radius:99px;margin:2px 0 18px}
+#nett-root .nett-think b{color:var(--nt-bad)}
+#nett-root .nett-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+#nett-root .nett-tool{font-family:var(--nt-mono);font-weight:800;font-size:14px;padding:9px 16px;border-radius:10px;border:2px solid var(--nt-line);
+  background:#fff;color:var(--nt-indigo);cursor:pointer;transition:all .15s}
+#nett-root .nett-tool:hover{border-color:var(--nt-indigo)}
+#nett-root .nett-tool.on{background:var(--nt-indigo);border-color:var(--nt-indigo);color:#fff}
+#nett-root .nett-tooldesc{font-size:13px;font-weight:700;color:var(--nt-muted);margin:0 0 12px;min-height:20px}
+#nett-root .nett-tooldesc b{color:var(--nt-indigo)}
+#nett-root .nett-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+#nett-root .nett-tlabel{font-size:13px;font-weight:800;color:var(--nt-muted)}
+#nett-root .nett-select{font-family:var(--nt-cjk);font-weight:700;font-size:14px;padding:9px 12px;border-radius:9px;border:2px solid var(--nt-line);background:#fff;color:var(--nt-ink);min-width:240px;cursor:pointer}
+#nett-root .nett-select:disabled{opacity:.45;cursor:default}
+#nett-root .nett-run{font-family:var(--nt-cjk);font-weight:800;font-size:14px;padding:9px 20px;border-radius:10px;border:2px solid var(--nt-indigo);background:var(--nt-indigo);color:#fff;cursor:pointer;transition:transform .1s}
+#nett-root .nett-run:hover{transform:translateY(-1px)} #nett-root .nett-run:disabled{opacity:.5;cursor:default;transform:none}
+#nett-root .nett-clear{font-family:var(--nt-cjk);font-weight:800;font-size:14px;padding:9px 16px;border-radius:10px;border:2px solid var(--nt-line);background:#fff;color:var(--nt-indigo);cursor:pointer}
+/* 終端機 */
+#nett-root .nett-term{background:var(--nt-termbg);border-radius:12px;padding:16px 18px;min-height:188px;max-height:360px;overflow:auto;
+  font-family:var(--nt-mono);font-size:13.5px;line-height:1.65;color:var(--nt-termfg);box-shadow:inset 0 2px 14px rgba(0,0,0,.4);white-space:pre-wrap;word-break:break-word}
+#nett-root .nett-term .nt-cmd{color:#fff;font-weight:700}
+#nett-root .nett-term .nt-cmd .nt-prompt{color:var(--nt-termgreen)}
+#nett-root .nett-term .nt-ok{color:var(--nt-termgreen)}
+#nett-root .nett-term .nt-bad{color:#FF8E83}
+#nett-root .nett-term .nt-dim{color:var(--nt-termdim)}
+#nett-root .nett-cursor{display:inline-block;width:9px;height:16px;background:var(--nt-termgreen);vertical-align:-3px;animation:nt-blink 1s steps(1) infinite}
+@keyframes nt-blink{50%{opacity:0}}
+/* 解讀 */
+#nett-root .nett-read{margin-top:14px;border:1px solid var(--nt-line);border-left:6px solid var(--nt-indigo);background:var(--nt-wash);
+  border-radius:0 12px 12px 0;padding:13px 16px;font-size:14px;font-weight:600;color:var(--nt-ink);display:none}
+#nett-root .nett-read.show{display:block}
+#nett-root .nett-read.ok{border-left-color:var(--nt-ok);background:#F1FAF4}
+#nett-root .nett-read.bad{border-left-color:var(--nt-bad);background:#FCEFEF}
+#nett-root .nett-read .nett-rtag{display:inline-block;font-size:12px;font-weight:900;color:#fff;padding:2px 10px;border-radius:99px;margin-right:8px;background:var(--nt-muted)}
+#nett-root .nett-read.ok .nett-rtag{background:var(--nt-ok)} #nett-root .nett-read.bad .nett-rtag{background:var(--nt-bad)}
+/* 排查順序 */
+#nett-root .nett-flow{margin-top:22px}
+#nett-root .nett-flow h3{font-size:16px;font-weight:900;color:var(--nt-indigo);margin:0 0 10px}
+#nett-root .nett-steps{display:grid;gap:9px}
+#nett-root .nett-step{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--nt-line);border-radius:12px;background:#fff;padding:11px 14px}
+#nett-root .nett-step .nett-snum{flex:none;width:26px;height:26px;border-radius:8px;background:var(--nt-indigo);color:#fff;font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:var(--nt-mono)}
+#nett-root .nett-step code{font-family:var(--nt-mono);font-weight:800;color:var(--nt-indigo);background:var(--nt-wash);padding:1px 7px;border-radius:6px}
+#nett-root .nett-step .nett-stext{font-size:13.5px;font-weight:600;color:var(--nt-ink)}
+#nett-root .nett-step .nett-stext b{color:var(--nt-bad)}
+@media(max-width:760px){#nett-root .nett-select{min-width:0;flex:1}}
+@media(prefers-reduced-motion:reduce){#nett-root .nett-cursor{animation:none}}
+</style>
+<script>
+(function(){
+  if (document.getElementById("nett-root")) return;                      // 冪等防護
+  var host = document.getElementById("view-packetflow");
+  if (!host) return;                                                     // 須在「訊息傳送」單元中
+  function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+  var REDUCE = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  var TOOLS={
+    ping:{name:"ping",desc:'<b>ping</b>：送出封包測試「能不能連到對方、來回要多久」。最常用的連通性檢查。',needsTarget:true},
+    tracert:{name:"tracert",desc:'<b>tracert</b>：逐「躍點」追蹤封包經過哪些路由器，看資料<b>斷在哪一段</b>。',needsTarget:true},
+    nslookup:{name:"nslookup",desc:'<b>nslookup</b>：查詢 DNS，把網域名稱（網址）翻成 IP 位址，檢查<b>網址解析</b>是否正常。',needsTarget:true},
+    ipconfig:{name:"ipconfig",desc:'<b>ipconfig</b>：顯示本機的 IP、子網路遮罩、預設閘道與 DNS，先確認<b>自己設定</b>對不對。',needsTarget:false}
+  };
+  var TARGETS=[
+    {id:"gw",   label:"預設閘道 192.168.1.1（正常）",        ip:"192.168.1.1",  domain:null,                kind:"ok",  hops:1},
+    {id:"dns",  label:"公用 DNS 8.8.8.8（正常）",            ip:"8.8.8.8",      domain:null,                kind:"ok",  hops:5},
+    {id:"site", label:"校園網站 www.nuk.edu.tw（正常）",      ip:"140.127.0.1",  domain:"www.nuk.edu.tw",    kind:"ok",  hops:6},
+    {id:"down", label:"故障主機 10.0.0.99（連不上）",         ip:"10.0.0.99",    domain:null,                kind:"timeout", hops:2},
+    {id:"bad",  label:"不存在的網域 no-such.invalid（解析失敗）", ip:null,        domain:"no-such.invalid",   kind:"nxdomain", hops:0}
+  ];
+
+  /* 建立 UI 容器（接在封包動畫之後） */
+  var root=el("div"); root.id="nett-root"; host.appendChild(root);
+  root.appendChild(el("div","nett-eyebrow","網路單元　·　障礙排除實作"));
+  root.appendChild(el("div","nett-h2","🛠️ 網路障礙排除工具"));
+  root.appendChild(el("div","nett-sub","網路不通時，工程師靠這幾個指令逐段定位問題。選一個工具與目標，先猜會看到什麼，再執行驗證。"));
+  root.appendChild(el("div","nett-think",'<span>🧠 <b>先思考</b></span><span>連不上某個網站時，你會先檢查哪裡？是自己的設定、到閘道的線路、對外連線，還是網址解析？</span>'));
+
+  var tools=el("div","nett-tools");
+  var toolBtns={};
+  Object.keys(TOOLS).forEach(function(k){
+    var b=el("button","nett-tool",TOOLS[k].name); b.dataset.k=k;
+    b.addEventListener("click",function(){ selectTool(k); });
+    tools.appendChild(b); toolBtns[k]=b;
+  });
+  root.appendChild(tools);
+  var tdesc=el("div","nett-tooldesc"); root.appendChild(tdesc);
+
+  var bar=el("div","nett-bar");
+  var tlab=el("span","nett-tlabel","目標："); bar.appendChild(tlab);
+  var sel=el("select","nett-select");
+  TARGETS.forEach(function(t){ var o=document.createElement("option"); o.value=t.id; o.textContent=t.label; sel.appendChild(o); });
+  bar.appendChild(sel);
+  var runBtn=el("button","nett-run","▶ 執行"); bar.appendChild(runBtn);
+  var clrBtn=el("button","nett-clear","清除"); bar.appendChild(clrBtn);
+  root.appendChild(bar);
+
+  var cmdEcho=el("div"); cmdEcho.style.cssText="font-family:var(--nt-mono);font-size:13px;color:#5b6b7a;font-weight:700;margin:0 0 6px;min-height:18px"; root.appendChild(cmdEcho);
+  var term=el("div","nett-term"); term.id="nett-term"; root.appendChild(term);
+  var read=el("div","nett-read"); read.id="nett-read"; root.appendChild(read);
+
+  /* 排查順序指南 */
+  var flow=el("div","nett-flow");
+  flow.appendChild(el("h3","","🧭 「網頁打不開」標準排查順序"));
+  var steps=el("div","nett-steps");
+  [["1",'<code>ipconfig</code>　先看自己有沒有<b>正確的 IP 與預設閘道</b>。若 IP 是 169.254 開頭，代表沒拿到 IP。'],
+   ["2",'<code>ping 192.168.1.1</code>　ping <b>閘道</b>。不通 → 問題在<b>家裡／校內的線路或設定</b>。'],
+   ["3",'<code>ping 8.8.8.8</code>　ping 一個<b>外部 IP</b>。閘道通但這裡不通 → <b>對外連線</b>出問題。'],
+   ["4",'<code>nslookup 網址</code>　外部 IP 通、但網址打不開 → 多半是 <b>DNS 解析</b>問題。'],
+   ["5",'<code>tracert 目標</code>　最後用追蹤路由看封包<b>斷在哪一段</b>，鎖定故障節點。']
+  ].forEach(function(s){
+    var d=el("div","nett-step");
+    d.appendChild(el("div","nett-snum",s[0]));
+    d.appendChild(el("div","nett-stext",s[1]));
+    steps.appendChild(d);
+  });
+  flow.appendChild(steps);
+  root.appendChild(flow);
+
+  /* ---------- 狀態 ---------- */
+  var curTool="ping", running=false, timers=[];
+  function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+  function after(ms,fn){ var t=setTimeout(fn, REDUCE?Math.min(ms,40):ms); timers.push(t); }
+
+  function selectTool(k){
+    curTool=k;
+    Object.keys(toolBtns).forEach(function(x){ toolBtns[x].classList.toggle("on",x===k); });
+    tdesc.innerHTML=TOOLS[k].desc;
+    var needs=TOOLS[k].needsTarget;
+    sel.disabled=!needs; tlab.style.opacity=needs?"1":".45";
+  }
+
+  function targetById(id){ for(var i=0;i<TARGETS.length;i++) if(TARGETS[i].id===id) return TARGETS[i]; return TARGETS[0]; }
+
+  /* ---------- 產生模擬輸出（回傳 [{cls,txt}] 行陣列） ---------- */
+  function lines(){ return Array.prototype.slice.call(arguments); }
+  function L(txt,cls){ return {txt:txt,cls:cls||""}; }
+  function rt(base){ return REDUCE?base:(base+Math.floor(Math.random()*3)); }
+
+  function genPing(t){
+    if(t.kind==="nxdomain") return {out:lines(
+      L("Ping 要求找不到主機 "+t.domain+"。請檢查該名稱，然後再試一次。","bad")
+    ),verdict:"bad",read:'<span class="nett-rtag">解析失敗</span>連名稱都翻不成 IP，代表是 <b>DNS 問題</b>，不是線路不通。下一步用 <code>nslookup</code> 確認，或改用 IP 直接 ping。'};
+    if(t.kind==="timeout"){ var o=[L("",""),L("正在 Ping "+t.ip+" 具有 32 位元組的資料:")];
+      for(var i=0;i<4;i++) o.push(L("要求等候逾時。","bad"));
+      o.push(L(""));o.push(L(t.ip+" 的 Ping 統計資料:"));
+      o.push(L("    封包: 已傳送 = 4，已收到 = 0，已遺失 = 4 (100% 遺失)，","bad"));
+      return {out:o,verdict:"bad",read:'<span class="nett-rtag">100% 遺失</span>完全沒有回覆＝<b>連不到該主機</b>：可能主機關機、IP 打錯、線路中斷或被防火牆擋下。接著用 <code>tracert</code> 看斷在哪一段。'};
+    }
+    var o2=[L(""),L("正在 Ping "+t.ip+(t.domain?" ["+t.ip+"]":"")+" 具有 32 位元組的資料:")];
+    var times=[];
+    for(var j=0;j<4;j++){ var ms=rt(t.id==="gw"?0:(t.id==="dns"?14:20)); times.push(ms);
+      o2.push(L("回覆自 "+t.ip+": 位元組=32 時間"+(ms===0?"<1ms":"="+ms+"ms")+" TTL="+(t.id==="gw"?64:118),"ok")); }
+    var mn=Math.min.apply(null,times),mx=Math.max.apply(null,times),av=Math.round(times.reduce(function(a,b){return a+b;},0)/4);
+    o2.push(L(""));o2.push(L(t.ip+" 的 Ping 統計資料:"));
+    o2.push(L("    封包: 已傳送 = 4，已收到 = 4，已遺失 = 0 (0% 遺失)，","ok"));
+    o2.push(L("大約的來回時間 (毫秒):"));
+    o2.push(L("    最小值 = "+mn+"ms，最大值 = "+mx+"ms，平均 = "+av+"ms"));
+    return {out:o2,verdict:"ok",read:'<span class="nett-rtag">連通 0% 遺失</span>有回覆且 0% 遺失＝<b>到該主機的連線正常</b>，來回約 '+av+'ms。若網頁仍打不開，問題通常在更上層（如 DNS 或網站本身）。'};
+  }
+
+  function genTracert(t){
+    if(t.kind==="nxdomain") return {out:lines(L("Tracert 無法解析目標系統名稱 "+t.domain+"。","bad")),
+      verdict:"bad",read:'<span class="nett-rtag">解析失敗</span>連名稱都解析不出來，屬於 <b>DNS 問題</b>；先用 <code>nslookup</code> 處理網址解析。'};
+    var o=[L(""),L("經由最多 30 個躍點追蹤到 "+(t.domain||t.ip)+" 的路由"),L("")];
+    var path=[
+      {ip:"192.168.1.1",note:"本機閘道"},
+      {ip:"10.1.1.1",note:"ISP 接取"},
+      {ip:"168.95.1.1",note:"電信骨幹"},
+      {ip:"72.14.236.1",note:""},
+      {ip:t.ip||"8.8.8.8",note:t.domain||""}
+    ];
+    var n=Math.max(1,t.hops);
+    if(t.kind==="timeout"){
+      o.push(L("  1    <1 ms    <1 ms    <1 ms  192.168.1.1"));
+      o.push(L("  2     8 ms     7 ms     8 ms  10.1.1.1"));
+      o.push(L("  3     *        *        *     要求等候逾時。","bad"));
+      o.push(L("  4     *        *        *     要求等候逾時。","bad"));
+      o.push(L("  5     *        *        *     要求等候逾時。","bad"));
+      o.push(L(""));o.push(L("追蹤在第 2 躍點之後中斷。","bad"));
+      return {out:o,verdict:"bad",read:'<span class="nett-rtag">中途斷線</span>前兩躍點正常、之後全部逾時＝封包<b>送到 ISP 後就過不去</b>，問題在那一段（對外線路或目標端）。'};
+    }
+    for(var i=0;i<n;i++){ var h=path[Math.min(i,path.length-1)]; var a=rt(i*4),b=rt(i*4),c=rt(i*4);
+      function f(x){return x===0?"<1 ms":(" "+x+" ms").slice(-6);}
+      o.push(L(("  "+(i+1)).slice(-3)+"  "+f(a)+"   "+f(b)+"   "+f(c)+"  "+h.ip+(h.note?" ["+h.note+"]":""),"ok"));
+    }
+    o.push(L(""));o.push(L("追蹤完成。","ok"));
+    return {out:o,verdict:"ok",read:'<span class="nett-rtag">路徑完整</span>每一躍點都有回應、最後抵達目標＝<b>整條路徑暢通</b>。可看出封包經過哪些路由器與各段延遲。'};
+  }
+
+  function genNslookup(t){
+    if(t.kind==="nxdomain") return {out:lines(
+      L("伺服器:  dns.hinet.net"),L("Address:  168.95.1.1"),L(""),
+      L("*** dns.hinet.net 找不到 "+t.domain+": Non-existent domain","bad")
+    ),verdict:"bad",read:'<span class="nett-rtag">查無此網域</span>DNS 回報「不存在的網域」＝<b>網址打錯或該網域沒登記</b>。先確認網址拼字。'};
+    if(!t.domain) return {out:lines(
+      L("伺服器:  dns.hinet.net"),L("Address:  168.95.1.1"),L(""),
+      L("名稱:    "+t.ip),L("Address:  "+t.ip,"ok")
+    ),verdict:"ok",read:'<span class="nett-rtag">IP 目標</span>這個目標本來就是 IP，不需經 DNS 翻譯。nslookup 主要用於查「網址 → IP」。'};
+    return {out:lines(
+      L("伺服器:  dns.hinet.net"),L("Address:  168.95.1.1"),L(""),
+      L("非授權的回答:"),L("名稱:    "+t.domain),L("Address:  "+t.ip,"ok")
+    ),verdict:"ok",read:'<span class="nett-rtag">解析成功</span>網址成功翻成 IP（'+t.ip+'）＝<b>DNS 正常</b>。若仍連不上，再用 <code>ping</code>／<code>tracert</code> 檢查到該 IP 的連線。'};
+  }
+
+  function genIpconfig(){
+    return {out:lines(
+      L("Windows IP 設定"),L(""),
+      L("乙太網路卡 區域連線:"),
+      L("   連線特定 DNS 尾碼 . . . . . . . : nuk.edu.tw"),
+      L("   IPv4 位址 . . . . . . . . . . . . : 192.168.1.23","ok"),
+      L("   子網路遮罩 . . . . . . . . . . . : 255.255.255.0"),
+      L("   預設閘道 . . . . . . . . . . . . : 192.168.1.1","ok")
+    ),verdict:"ok",read:'<span class="nett-rtag">設定正常</span>已取得 <b>192.168.1.23</b>，遮罩 255.255.255.0、閘道 192.168.1.1＝<b>本機網路設定正常</b>。若 IP 是 <code>169.254.x.x</code> 開頭，代表沒拿到 IP，要先檢查 DHCP／線路。'};
+  }
+
+  function build(){
+    var t=targetById(sel.value);
+    if(curTool==="ping") return {cmd:"ping "+(t.domain||t.ip), data:genPing(t)};
+    if(curTool==="tracert") return {cmd:"tracert "+(t.domain||t.ip), data:genTracert(t)};
+    if(curTool==="nslookup") return {cmd:"nslookup "+(t.domain||t.ip), data:genNslookup(t)};
+    return {cmd:"ipconfig", data:genIpconfig()};
+  }
+
+  /* ---------- 串流輸出 ---------- */
+  function run(){
+    if(running) return; running=true; runBtn.disabled=true; read.className="nett-read";
+    clearTimers(); term.innerHTML="";
+    var b=build();
+    cmdEcho.textContent="C:\\Users\\student> "+b.cmd;
+    var cmdLine=el("div","nt-cmd"); cmdLine.innerHTML='<span class="nt-prompt">C:\\&gt;</span> '+b.cmd; term.appendChild(cmdLine);
+    var cur=el("span","nett-cursor"); term.appendChild(cur);
+    var rows=b.data.out, i=0;
+    function emit(){
+      if(i>=rows.length){
+        if(cur.parentNode) cur.parentNode.removeChild(cur);
+        var rd=document.getElementById("nett-read");
+        rd.className="nett-read show "+b.data.verdict; rd.innerHTML=b.data.read;
+        running=false; runBtn.disabled=false; return;
+      }
+      var r=rows[i++];
+      var ln=el("div", r.cls?("nt-"+r.cls):null, r.txt===""?"&nbsp;":r.txt.replace(/&/g,"&amp;").replace(/</g,"&lt;"));
+      term.insertBefore(ln,cur);
+      term.scrollTop=term.scrollHeight;
+      after(130,emit);
+    }
+    after(180,emit);
+  }
+  function clearAll(){ clearTimers(); running=false; runBtn.disabled=false; term.innerHTML=""; cmdEcho.textContent=""; read.className="nett-read"; }
+
+  runBtn.addEventListener("click",run);
+  clrBtn.addEventListener("click",clearAll);
+  selectTool("ping");
+})();
+</script>
+
+<!-- ===== 注入：動手實習中心（hub）（只增不改 / 冪等防護 / .lhub- 前綴 / 整合三大實習單元）===== -->
+<style id="lhub-style">
+#lhub-root{--lh-ink:#15151F;--lh-muted:#4A4A63;--lh-line:#C7CBE4;--lh-wash:#EEF0FB;
+  --lh-hw:#0E8A93;--lh-sw:#7A3FB0;--lh-nw:#2A4FB8;
+  --lh-cjk:"Microsoft JhengHei","Noto Sans TC","PingFang TC","Heiti TC",sans-serif;
+  font-family:var(--lh-cjk);color:var(--lh-ink);max-width:980px;margin:0 auto;padding:6px 0 70px;line-height:1.7}
+#lhub-root *{box-sizing:border-box}
+#lhub-root .lh-eyebrow{font-size:13px;letter-spacing:.2em;color:#C81E1E;font-weight:800}
+#lhub-root .lh-h1{font-size:30px;font-weight:900;color:#2A2A8A;margin:6px 0 4px;line-height:1.25}
+#lhub-root .lh-sub{color:var(--lh-muted);font-size:15px;font-weight:600;margin-bottom:8px}
+#lhub-root .lh-think{display:inline-flex;align-items:center;gap:7px;background:var(--lh-wash);border:1.5px solid #2A2A8A;
+  color:#2A2A8A;font-weight:800;font-size:13.5px;padding:7px 14px;border-radius:99px;margin:6px 0 22px}
+#lhub-root .lh-think b{color:#C81E1E}
+#lhub-root .lh-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+#lhub-root .lh-card{border:2px solid var(--lh-line);border-top-width:5px;border-radius:16px;background:#fff;padding:18px 18px 16px;
+  box-shadow:0 3px 14px rgba(20,30,80,.07);display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s}
+#lhub-root .lh-card:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(20,30,80,.14)}
+#lhub-root .lh-card.hw{border-top-color:var(--lh-hw)} #lhub-root .lh-card.sw{border-top-color:var(--lh-sw)} #lhub-root .lh-card.nw{border-top-color:var(--lh-nw)}
+#lhub-root .lh-ico{font-size:34px;line-height:1;margin-bottom:6px}
+#lhub-root .lh-tag{align-self:flex-start;font-size:12px;font-weight:800;letter-spacing:.05em;color:#fff;padding:3px 10px;border-radius:99px;margin-bottom:8px}
+#lhub-root .lh-card.hw .lh-tag{background:var(--lh-hw)} #lhub-root .lh-card.sw .lh-tag{background:var(--lh-sw)} #lhub-root .lh-card.nw .lh-tag{background:var(--lh-nw)}
+#lhub-root .lh-title{font-size:18px;font-weight:900;color:var(--lh-ink);margin-bottom:5px}
+#lhub-root .lh-desc{font-size:13.5px;font-weight:600;color:var(--lh-muted);line-height:1.6;flex:1}
+#lhub-root .lh-meta{font-size:12px;font-weight:700;color:#8A8FB0;font-family:ui-monospace,Menlo,Consolas,monospace;margin:10px 0 12px}
+#lhub-root .lh-go{font-family:var(--lh-cjk);font-weight:800;font-size:15px;padding:11px 18px;border-radius:11px;border:2px solid;cursor:pointer;color:#fff;transition:transform .1s}
+#lhub-root .lh-go:hover{transform:translateY(-1px)}
+#lhub-root .lh-card.hw .lh-go{background:var(--lh-hw);border-color:var(--lh-hw)} #lhub-root .lh-card.sw .lh-go{background:var(--lh-sw);border-color:var(--lh-sw)} #lhub-root .lh-card.nw .lh-go{background:var(--lh-nw);border-color:var(--lh-nw)}
+#lhub-root .lh-note{margin-top:20px;font-size:13px;color:var(--lh-muted);font-weight:600;line-height:1.75;border-top:1px dashed var(--lh-line);padding-top:14px}
+@media(max-width:760px){#lhub-root .lh-grid{grid-template-columns:1fr}}
+/* 首頁實習導覽卡的子單元連結 */
+.lhub-subs{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.lhub-sublink{font:700 12px var(--lh-cjk,"Microsoft JhengHei",sans-serif);border:1.5px solid #C7CBE4;background:#fff;color:#2A2A8A;
+  border-radius:99px;padding:4px 11px;cursor:pointer;transition:background .15s,border-color .15s}
+.lhub-sublink:hover{background:#EEF0FB;border-color:#2A2A8A}
+</style>
+<script>
+(function(){
+  if (document.getElementById("view-lab-hub")) return;               // 冪等防護
+  var ov = document.getElementById("view-overview");
+  if (!ov || !ov.parentNode) return;
+  function callShow(v){ if(window.__show) window.__show(v);
+    else { document.querySelectorAll(".view").forEach(function(x){x.classList.toggle("active",x.id==="view-"+v);}); window.scrollTo({top:0}); } }
+  function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}
+
+  var UNITS=[
+    {key:"pcbuild",cls:"hw",tag:"硬體實習",ico:"🧩",title:"PC 積木組裝",
+      desc:"把 CPU、記憶體、顯卡等零件積木，依正確順序拖進機殼插槽，13 步組好一台能開機的電腦；順序錯會被擋下並提示。",
+      meta:"看得見・摸得到的實體　·　拖曳積木 + 課後測驗"},
+    {key:"lab",cls:"sw",tag:"軟體實習",ico:"⚡",title:"不插電五站實習",
+      desc:"動手玩五個不插電關卡，再連平台驗證：二進位、排序、最小生成樹、可靠傳輸、錯誤偵測——把演算法觀念親手操作一遍。",
+      meta:"五站闖關　·　動手玩後連線驗證"},
+    {key:"packetflow",cls:"nw",tag:"網路實習",ico:"🔁",title:"訊息傳送",
+      desc:"先看封包如何在各層之間雙向傳送（請求 ▶ / 回應 ◀），再用 ping、tracert、nslookup、ipconfig 等工具動手做網路障礙排除。",
+      meta:"封包雙向流動　+　ping／tracert 障礙排除"}
+  ];
+
+  /* ---------- hub view ---------- */
+  var section=el("section","view"); section.id="view-lab-hub";
+  var back=el("button","btn back"); back.textContent="← 返回首頁";
+  back.addEventListener("click",function(){callShow("overview");});
+  var subbar=el("div","subbar"); subbar.appendChild(back);
+  subbar.appendChild(el("span","crumb","🧪 動手實習中心"));
+  section.appendChild(subbar);
+  var root=el("div"); root.id="lhub-root"; section.appendChild(root);
+  ov.parentNode.appendChild(section);
+
+  root.appendChild(el("div","lh-eyebrow","計算機概論實習　·　郭博仁"));
+  root.appendChild(el("div","lh-h1","動手實習中心"));
+  root.appendChild(el("div","lh-sub","三個內建實習單元，對應硬體、軟體、網路——先動手玩，再連平台驗證。"));
+  root.appendChild(el("div","lh-think",'<span>🧠 <b>先思考</b> → 後驗證</span><span>每個單元都讓你先操作、先猜想，再用平台給的回饋驗證自己是不是真的懂。</span>'));
+
+  var grid=el("div","lh-grid");
+  UNITS.forEach(function(u){
+    var c=el("div","lh-card "+u.cls);
+    c.innerHTML='<div class="lh-ico">'+u.ico+'</div><span class="lh-tag">'+u.tag+'</span>'
+      +'<div class="lh-title">'+u.title+'</div><div class="lh-desc">'+u.desc+'</div>'
+      +'<div class="lh-meta">'+u.meta+'</div>';
+    var go=el("button","lh-go"); go.textContent="開始實習 →";
+    go.addEventListener("click",function(){callShow(u.key);});
+    c.appendChild(go); grid.appendChild(c);
+  });
+  root.appendChild(grid);
+  root.appendChild(el("div","lh-note","💡 這三個單元都採「先思考 → 後驗證」：硬體用拖曳積木建立實體感、軟體用不插電關卡操作演算法、網路用封包動畫理解分層協作。完成後可至「即時評量／課後評量」檢核學習成效。"));
+
+  /* ---------- 首頁導覽卡（單一實習入口） ---------- */
+  (function(){
+    var grids=ov.querySelectorAll(".navgrid"); if(!grids.length) return;
+    var grp=el("div","grp"); grp.innerHTML='<span class="grp-t">實習單元</span><span class="grp-s">動手做中學・先思考後驗證</span>';
+    var grid2=el("div","navgrid");
+    var card=el("div","navcard"); card.style.gridColumn="1 / -1"; card.style.borderTop="4px solid #2A2A8A";
+    card.style.flexDirection="row"; card.style.alignItems="center"; card.style.flexWrap="wrap"; card.style.gap="12px 18px";
+    var info=el("div"); info.style.cssText="display:flex;align-items:center;gap:13px;flex:1;min-width:260px";
+    info.innerHTML='<span class="nc-ico" style="font-size:26px;color:#2A2A8A">🧪</span>'
+      +'<div><b style="font-size:15px">動手實習中心</b>'
+      +'<span style="display:block;font-size:12px;color:var(--muted)">三個內建實習單元　·　🧩 硬體積木組裝　|　⚡ 不插電五站　|　🔁 訊息傳送</span></div>';
+    card.appendChild(info);
+    var subs=el("div","lhub-subs");
+    [["pcbuild","🧩 硬體積木"],["lab","⚡ 不插電五站"],["packetflow","🔁 訊息傳送"]].forEach(function(p){
+      var b=el("button","lhub-sublink",p[1]); b.addEventListener("click",function(ev){ev.stopPropagation();callShow(p[0]);}); subs.appendChild(b);
+    });
+    card.appendChild(subs);
+    var go=el("button","btn primary"); go.textContent="前往實習 →"; go.style.marginLeft="auto";
+    go.style.background="#2A2A8A"; go.style.borderColor="#2A2A8A";
+    go.addEventListener("click",function(){callShow("lab-hub");});
+    card.appendChild(go); grid2.appendChild(card);
+    var firstGrid=grids[0];
+    firstGrid.parentNode.insertBefore(grp,firstGrid.nextSibling);
+    grp.parentNode.insertBefore(grid2,grp.nextSibling);
+  })();
+
+  /* ---------- 整合：隱藏原「延伸實習」單列卡，改由實習中心統一入口 ---------- */
+  (function(){
+    var grps=ov.querySelectorAll(".grp");
+    for(var i=0;i<grps.length;i++){
+      var t=grps[i].querySelector(".grp-t");
+      if(t && t.textContent.trim()==="延伸實習"){
+        grps[i].style.display="none";
+        var nx=grps[i].nextElementSibling;
+        if(nx && nx.classList.contains("navgrid")) nx.style.display="none";
+        break;
+      }
+    }
+  })();
+
+  /* ---------- 整合：移除首頁原本內嵌的「橫向資料流」示範（已獨立為「訊息傳送」單元） ---------- */
+  (function(){
+    var flow=document.getElementById("ovFlow");
+    var panel=flow && (flow.closest ? flow.closest(".panel") : null);
+    if(!panel){ // 後備：往上找 .panel
+      var p=flow; while(p && !(p.classList && p.classList.contains("panel"))) p=p.parentElement;
+      panel=p;
+    }
+    if(panel) panel.style.display="none";
+  })();
+
+  /* ---------- 整合：首頁「繼續實習」橫幅不再單獨露出（實習已併入實習中心） ---------- */
+  (function(){
+    if (window.__lhubResumePatched) return; window.__lhubResumePatched = true;
+    var rc = window.ccResume;
+    if (!rc || typeof rc.render !== "function") return;
+    var inner = rc.render;
+    rc.render = function(){
+      var savedApi = window.__ccLab;       // 僅在渲染當下停用實習橫幅，讓首頁交還平台原本「繼續上次／建議下一步」
+      window.__ccLab = null;
+      try { return inner.apply(this, arguments); }
+      finally { window.__ccLab = savedApi; }   // 立即還原：實習中心與不插電實習頁功能不受影響
+    };
+    if (document.getElementById("view-overview") && document.getElementById("view-overview").classList.contains("active")) {
+      try { rc.render(); } catch(e){}
+    }
+  })();
+})();
+</script>
+
 </body>
 </html>
