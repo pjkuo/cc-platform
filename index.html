@@ -7133,6 +7133,9 @@ body:not(.student-mode) #tt-panel{display:block}
   relabel(); apply();
   btn.addEventListener("click", function(){ if(isT()) turnOff(); else openModal(); });
 
+  // 統一雲端：讓平台課後／即時評量（CCLOUD）也寫入同一份 Google 試算表
+  try{ if(window.CCLOUD && typeof CCLOUD.setUrl==="function" && CCLOUD.getUrl()!==TT_GAS){ CCLOUD.setUrl(TT_GAS); } }catch(e){}
+
   // 載入時：僅「受信任裝置」（曾輸入正確密碼）才從 Google 雲端還原狀態，避免學生端誤觸發
   if(trusted()){
     cloudGetState(function(j){ if(j && typeof j.tt==="boolean"){ setT(j.tt); apply(); relabel(); } });
