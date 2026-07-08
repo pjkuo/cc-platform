@@ -7494,5 +7494,61 @@ body:not(.student-mode) #tt-panel{display:block}
   else window.addEventListener("load",boot);
 })();
 </script>
+
+<!-- ===== 注入：AI 素養問卷 QR（只增不改 / 冪等防護 / .srv- 前綴 / QR 內嵌 data URI / 掛入 AI監管貫穿帶，含 reorg 輪詢與保底）===== -->
+
+<style id="srv-style">
+#view-overview .srv-card{background:#fff;border:1px solid var(--line);border-top:4px solid var(--gold);border-radius:14px;padding:14px 16px;box-shadow:0 2px 10px rgba(20,40,70,.05)}
+#view-overview .srv-row{display:flex;gap:16px;align-items:center}
+#view-overview .srv-qr{width:118px;height:118px;flex:0 0 auto;border:1px solid var(--line);border-radius:10px;background:#fff;padding:5px}
+#view-overview .srv-info{min-width:0}
+#view-overview .srv-title{font-size:15px;font-weight:800;color:var(--ink)}
+#view-overview .srv-sub{font-size:13px;color:var(--muted);margin:3px 0 8px}
+#view-overview .srv-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+#view-overview .srv-pills span{font-size:11.5px;color:#0b3b2e;background:rgba(19,138,138,.14);border-radius:999px;padding:3px 10px}
+#view-overview .srv-go{display:inline-block;background:linear-gradient(135deg,var(--gold),#f0c873);color:#3a2c05;font-weight:800;font-size:14px;text-decoration:none;border-radius:10px;padding:9px 16px}
+#view-overview .srv-go:hover{filter:brightness(1.05)}
+#view-overview .srv-note{font-size:11px;color:var(--muted);margin-top:9px;line-height:1.5}
+@media(max-width:560px){#view-overview .srv-row{flex-direction:column;align-items:flex-start}}
+</style>
+
+<script>
+(function(){
+  if(window.__srvInit) return; window.__srvInit=1;
+  var URL="https://docs.google.com/forms/d/e/1FAIpQLSegGiesQGAQC1_9IynPzrY465i_b57d6HkgrZvsyxzXufwvdg/viewform";
+  var QR="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAmIAAAJiCAIAAADrNDmxAAARVUlEQVR4nO3cMZLr2BFEUbWiTe1Blva/IFnag3zIHUP54k/Xr6l64Dk+SRAAeQNOfj3P8zcA4P/5+/QBAMBeMgkAkUwCQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQPRdefE//vXP33UcS/z33/9peucbz1Xf2ajoO5M3ft/zMd941531fd8b37nyuWefdueceZoEgEgmASCSSQCIZBIAIpkEgEgmASCSSQCIZBIAIpkEgKi0wnN246ZJ3zvvPBtnfcsjlc+dWkraeQV3nqudblws2nnMN/4WKjxNAkAkkwAQySQARDIJAJFMAkAkkwAQySQARDIJAJFMAkDUuMJz1reYsHMh4syaxgZ9iyeVd+47qr4Fn6ntmJ3HPHV9p+y8vhWeJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgGlvhYb/KPkhleaRva2NqH2Rq76by2hv3Xyp2bse4Rht4mgSASCYBIJJJAIhkEgAimQSASCYBIJJJAIhkEgAimQSAyArPn1DZvOjbYdl5VH0q37fvPPddhT5T6z+Vd965lfNpv8FP42kSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSAKKxFZ4b1yX6jnnnDkvf3s3U9915niv6NlymVmnO+u6rnXf7jRs9O4+qwtMkAEQyCQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEMkkAESNKzxTiyd9KosYO19bceP33Xmep5ZWPu1cve93dNZ3X73vv/3M0yQARDIJAJFMAkAkkwAQySQARDIJAJFMAkAkkwAQySQARKUVnr59kBvt3AfZueEy9bk710Nu/B2975h37gpVVK7Rjde3j6dJAIhkEgAimQSASCYBIJJJAIhkEgAimQSASCYBIJJJAIi+nucZ+eDK9kRlIWLn5sXZ1Lnq8741nJ3f6Kzv+07ddTuvws5/hoqdu2B9PE0CQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQPRdeXHfOsz5nSsrD1NLKzeu/5xNXf2KqXO1c4flfWspO8/zjZ87dSZ33nWeJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEg+nqep+mtp/Yj+lS2Y27cB+nbytm5tTHlxl2Sip137M7Xnk39BvvORp/K9/U0CQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQDRd99bT+3O3LhqcXbjvs/Ugs/Oe+Psxj2UqW2gvm+0czVs585On53H7GkSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSAKLSCs+NiydTizZnO3d2+hZPprxvSafixvtq6j9navupz84Npp1H5WkSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSAKLSCo+dnV839X3P3rezM2Xn/bxzs+Zs6p7cuZXjF/pHU9fI0yQARDIJAJFMAkAkkwAQySQARDIJAJFMAkAkkwAQySQARF/P8zS99Y3rMH0rD1NbKjt3Om7cQtp5jXYu6ey8Y2/8RlP/SH123rFnniYBIJJJAIhkEgAimQSASCYBIJJJAIhkEgAimQSASCYBICqt8Ny44rHztWc794x2vvPOjY8b743K505dwbMbr8KNWzlnN34jT5MAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEH33vfXOTZOpBZCznSsefWfjfcsjO+/2vnee+qWc9f0z3KjyfXf+T05dQU+TABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQCSTABCVVnjsv2x454qdWyp96yEVfas0N64OfZq+ba8br/7Ur2zqXHmaBIBIJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBICotMJTMbVKM7XjMMXSyq+buq+mVod2ft/K5/ZtuNy4s/Np+z59/3WeJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEg+nqe58cvvnHl4ayytdH3uWc7N01uvEY3no2KncsyOxdt+o5q6o6tvHPFzu975mkSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSAKLvyov7dknOr7UQ8dfYufExdSanNnr6ztX7doUqps5G37/Z1GJRxc67ztMkAEQyCQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEMkkAERfz/P8+MVTiwk3LmJMsVnzu0wd89RGz87fwo2/7p2/wbOpPbKp1555mgSASCYBIJJJAIhkEgAimQSASCYBIJJJAIhkEgAimQSAqLTCU7FzLWXqnftMrWm8z86zsXNppeLTzmSfT/tH6vtcT5MAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEH3cCk/FjTsdU9sxlc/tO2ZX8K9554r37WTtPKqzqV/o2dTnepoEgEgmASCSSQCIZBIAIpkEgEgmASCSSQCIZBIAIpkEgOh76oN3bnycj+p96xJ9ppZHdu7sTB1V5XN37ij1XaOd607v27vZ+Qs98zQJAJFMAkAkkwAQySQARDIJAJFMAkAkkwAQySQARDIJAFFphWdqe6Jiaj/irO+o+jY+di4H3Xh9+z63T9+d0/e5FX3HfDb1+z173z/hmadJAIhkEgAimQSASCYBIJJJAIhkEgAimQSASCYBIJJJAIi+nueZPoY/bedqydRmzdQ7V9hg+mvceJ7P+hZtKm78Dd5o6j/W0yQARDIJAJFMAkAkkwAQySQARDIJAJFMAkAkkwAQySQARN/TB/D/3bi1ceMSR9957jtXfa/t82n35I3Xd+d/zs59rsrn3sjTJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQCSTABDJJABEpRWeqZWHir5j3rnEUXnnqaWVnddoagtpai1l6jzfuLMz9c433hsVU0flaRIAIpkEgEgmASCSSQCIZBIAIpkEgEgmASCSSQCIZBIAotIKz86dnTO7FX90PqqdyyNnfUc1dTb67Lwnz6Z+v2c3/hOe3fiN+v6BPU0CQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQPT1PM+PXzy1W1H53D43fqPKskzfKg2/S9/1PZu6c6a+b59P+x3tvIKeJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEg+q68uG/1oG/FY+fKw/vWcG78Ru/bYXnfzs6Unf8MZzt/+zvf+czTJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQCSTABDJJABEpRWes74NiBsXQG5cHrlxsahi6htV7o2dy0EVlbuub7GoT99dt/OOrbyzFR4AWEcmASCSSQCIZBIAIpkEgEgmASCSSQCIZBIAIpkEgOjreZ4fv7hvPeTGPZSKG89G5XP7zvP7zuTOe7Ji5+rQp53nqV/Kzp2dM0+TABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQCSTABB9V168c4thauPDwsuvv/PO3ZkpU+fqfffkzoWXnXf7p/32K1ff0yQARDIJAJFMAkAkkwAQySQARDIJAJFMAkAkkwAQySQARKUVnp2mlnQq6xKVdz6b2iXpOxuftrK009Rays6VlvNR3XjMFTt/+xWeJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgalzhqSwm7Fxq2PnO71uW6bv6lW80tVhUeW3fb/DTTP1Sdl6Fqf+rqXf2NAkAkUwCQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkAUWmFZ+dWztQqzc5Fm50bPVP3xtnOpZWd5+rTzkbfb3/qtTv/Gc6m/kU9TQJAJJMAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQCRTAJA9PU8T9Nb79wHqRzV1PJIxfs2iabeuWLqqHbuv5zduMJztnOf62zq3/vMCg8ArCOTABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQNS4wnN2417G1OfuXB6Z2hbZeeec7byvKqbuyTOrQ7/+2opP2+jxNAkAkUwCQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkA0XffW+9caug7qqlFjJ17KFO7MzduML3Pzu2Yvvtq6hudvW+DaepMepoEgEgmASCSSQCIZBIAIpkEgEgmASCSSQCIZBIAIpkEgOjreZ4fv7iyPXHj4knf1sbUVs6NmzU775y+38LUMVfsPOa+q7DzqM7e985nlc/1NAkAkUwCQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkA0XflxX3LFH12Lp7cuHnRd/WnNk0q7zy18HLjvk/lc6c2XHbuZL3v+u7c2PI0CQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQBRaYVnSmUDYmo7pm8h4mznok3fpsnO7af3mfqlTP32d/5+b9xBO6t8o74r6GkSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSAKLSCs/O3YqzTzvmqSWOvjO58wreuHhytnO/aec79911lXeuvLbv+/Zdoz6eJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEg+nqeZ+SDb9xiOOvbytm5aNO3O7Pz+1be+Wzn/Xx2491eMfVLmXrnnaa+r6dJAIhkEgAimQSASCYBIJJJAIhkEgAimQSASCYBIJJJAIi+Ky/uW9O4cQ+l77U7V0v69kF27vtMbalMXd++q9D3uTeeq7574/zaqes7te1V4WkSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSAKKv53l+/OKdiwlTSxxTdq6W9K2H3PjaPlP7Pju/b58b76upO/bGzakzT5MAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEH1XXrxzMeFs5yLG2c61o8pR7VzieN/93PfanZtEU6bu551XYef2U+VzPU0CQCSTABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQFRa4bnRzkWM82v7jvnGXaG+bZG+d/60Kzj1fad+g+d3nrpGU+984+/ozNMkAEQyCQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEMkkAESlFZ6+tYUpO3dJphZPbtzZmdrpqOi7vjtXaaa+0dnUv9nOO3bq3+zMCg8ArCOTABDJJABEMgkAkUwCQCSTABDJJABEMgkAkUwCQFRa4Tm7cV3irLIAMrU9UVnT2HnMfa/tOxuVz50ytf20c9tr6n6eMrXt1ffbr3wjT5MAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEDWu8Jy9b9Nk57rE+3Z2pvZfpjaYKqY2mPpUjvnG5aC+b7Tznqy8tu/6epoEgEgmASCSSQCIZBIAIpkEgEgmASCSSQCIZBIAIpkEgGhshedGfRsQNy68nO3cQ+lbLblxD+Vs6n5+3zbQ2Y2rNO+7gmeeJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBIBIJgEgssLz20ytaUwtYky9dsqnLfhU3rlv/6XyuVO/lBv3uc6f2/eNdvI0CQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQDR2ArPjVsMfRsfU3buv+w8zztXaXbu3UzZuWbVd8dOfaOpX9nUMXuaBIBIJgEgkkkAiGQSACKZBIBIJgEgkkkAiGQSACKZBIDo63meH7+4b4dlyvu2RW7Ut3fzvm2RsxvvjamrX3nniqmj2nk2dvI0CQCRTAJAJJMAEMkkAEQyCQCRTAJAJJMAEMkkAEQyCQBRaYUHAN7N0yQARDIJAJFMAkAkkwAQySQARDIJAJFMAkAkkwAQySQARDIJAJFMAkAkkwAQySQARDIJAJFMAkAkkwAQySQARDIJAJFMAkD0P76K0XECyBxtAAAAAElFTkSuQmCC";
+  function build(){
+    var card=document.createElement("div"); card.className="srv-card"; card.id="srv-card-root";
+    card.innerHTML=
+      '<div class="srv-row">'+
+        '<img class="srv-qr" alt="AI 素養問卷 QR code" src="'+QR+'">'+
+        '<div class="srv-info">'+
+          '<div class="srv-title">AI 素養問卷 · HOTL</div>'+
+          '<div class="srv-sub">「用 AI 做作業時，你會檢查它對不對嗎？」匿名研究問卷</div>'+
+          '<div class="srv-pills"><span>匿名</span><span>自願</span><span>約 6–8 分鐘</span><span>無對錯之分</span></div>'+
+          '<a class="srv-go" href="'+URL+'" target="_blank" rel="noopener">掃描 QR 或點此填答 →</a>'+
+          '<div class="srv-note">免登入・完全匿名・去識別化僅供學術分析　·　研究聯絡：郭博仁 pjkuo@npust.edu.tw</div>'+
+        '</div>'+
+      '</div>';
+    return card;
+  }
+  function place(){
+    if(document.getElementById("srv-card-root")) return true;
+    var body=document.querySelector("#view-overview .ccarch-bar .ccarch-body");   // 首選：AI監管貫穿帶內
+    if(body){ body.appendChild(build()); return true; }
+    return false;
+  }
+  function fallback(){
+    if(document.getElementById("srv-card-root")) return;
+    var ov=document.getElementById("view-overview"); if(!ov) return;
+    var host=ov.querySelector(".ccarch-root")||ov.querySelector(".panel")||ov;
+    host.appendChild(build());
+  }
+  var tries=0;
+  function tick(){ if(place()) return; if(++tries<15) setTimeout(tick,300); else fallback(); }
+  function boot(){ setTimeout(tick,150); }
+  if(document.readyState==="complete") boot(); else window.addEventListener("load",boot);
+})();
+</script>
 </body>
 </html>
